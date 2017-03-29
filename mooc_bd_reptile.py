@@ -12,7 +12,7 @@ def getHTMLText(url):
         r.encoding = r.apparent_encoding
         return r.text[0:1000]
     except:
-        return "产生异常"
+        print("爬取失败")
 
 
 def reptileTime():
@@ -20,7 +20,6 @@ def reptileTime():
     start = time.time()
     for i in range(100):
         getHTMLText(goal)
-
     end = time.time()
     time_consuming = time.strftime("%M:%S", time.localtime(end - start))
     print("爬去百度100次所用的时间为:", time_consuming)
