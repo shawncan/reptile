@@ -11,7 +11,7 @@ def getHTMLText(url):
         r.encoding = r.apparent_encoding
         return r.text
     except:
-        return "爬取失败"
+        print("爬取失败")
 
 
 if __name__ == "__main__":
