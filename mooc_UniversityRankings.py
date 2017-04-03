@@ -24,10 +24,10 @@ def fillUnivList(ulist, html):
 
 
 def printUnivList(ulist, num):
-    print("{:^10}\t{:^6}\t{:^10}".format("排名", "学校名称", "总分"))
+    print("{:^10}\t{:^10}\t{:^10}".format("排名", "学校名称", "总分"))
     for i in range(num):
         u = ulist[i]
-        print("{:^10}\t{:^6}\t{:^10}".format(u[0], u[1], u[2]))
+        print("{:^10}\t{:^10}\t{:^10}".format(u[0], u[1], u[2]))
 
 
 def main():
