@@ -48,11 +48,11 @@ def printGoodsLink(ilt, num):
 
 
 def main():
-    goods = '书包'
-    depth = 1
+    goods = input("请输入您要搜索关键字：")
+    depth = input("请输入需要搜索的页数：")
     start_url = 'https://s.taobao.com/search?q=' + goods
     infoList = []
-    for i in range(depth):
+    for i in range(int(depth)):
         try:
             url = start_url + '&s=' + str(44 * i)
             html = getHTMLText(url)
