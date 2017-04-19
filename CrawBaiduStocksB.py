@@ -33,16 +33,34 @@ def getStockList(lst, stockURL):
             continue
 
 
+def getStockInfo(lst, stockURL):
+    for stock in lst:
+        url = stockURL + stock + '.html'
+        html = getHTMLText(url)
+        try:
+            if html == "":
+                continue
+            infoDict = {}
+            soup = BeautifulSoup(html, 'html.parser')
 
-def getStockInfo(lst, stockURL, fpath):
-    pass
+            name = soup.find_all(attrs={'class': 'bets-name'})[0]
+            print(name.text.split()[0])
+
+            stockInfo = soup.find(attrs={'class': 'bets-content'})
+
+
+        except:
+            print('')
 
 
 def main():
     stock_list_url = 'http://quote.eastmoney.com/stocklist.html'
+    stock_info_url = "https://gupiao.baidu.com/stock/"
     slist = []
-    getStockList(slist, stock_list_url)
-    print(len(slist))
+    slist_1 = ['sz002415']
+    # getStockList(slist, stock_list_url)
+    getStockInfo(slist_1, stock_info_url)
+
 
 if __name__ == "__main__":
     main()
