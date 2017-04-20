@@ -44,9 +44,18 @@ def getStockInfo(lst, stockURL):
             soup = BeautifulSoup(html, 'html.parser')
 
             name = soup.find_all(attrs={'class': 'bets-name'})[0]
-            print(name.text.split()[0])
+            infoDict.update({'股票名称': name.text.split()[0]})
 
             stockInfo = soup.find(attrs={'class': 'bets-content'})
+            keyList = stockInfo.find_all('dt')
+            valueList = stockInfo.find_all('dd')
+            for i in range(len(keyList)):
+                key = keyList[i].text.split()[0]
+                val = valueList[i].text.split()[0]
+                infoDict[key] = val
+
+            print(infoDict)
+
 
 
         except:
@@ -56,6 +65,7 @@ def getStockInfo(lst, stockURL):
 def main():
     stock_list_url = 'http://quote.eastmoney.com/stocklist.html'
     stock_info_url = "https://gupiao.baidu.com/stock/"
+    output_file = '/Users/wangjiacan/Desktop/shawn/爬取资料/股票信息/'
     slist = []
     slist_1 = ['sz002415']
     # getStockList(slist, stock_list_url)
