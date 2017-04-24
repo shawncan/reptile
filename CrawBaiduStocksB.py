@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import traceback
+import os
+import time
 
 
 def getHTMLText(url):
@@ -33,10 +35,17 @@ def getStockList(lst, stockURL):
             continue
 
 
-def getStockInfo(lst, stockURL):
+def getStockInfo(lst, stockURL, path, name):
+    output_file = path + name
+    count = 0
+
     for stock in lst:
         url = stockURL + stock + '.html'
         html = getHTMLText(url)
+
+        if not os.path.exists(path):
+            os.mkdir(path)
+
         try:
             if html == "":
                 continue
@@ -54,22 +63,34 @@ def getStockInfo(lst, stockURL):
                 val = valueList[i].text.split()[0]
                 infoDict[key] = val
 
-            print(infoDict)
-
-
+            with open(output_file, 'a', encoding='utf-8') as f:
+                f.write(str(infoDict) + '\n')
+                count = count + 1
+                print("\r当前进度:{:.2f}%".format(count*100/len(lst), end=""))
 
         except:
-            print('')
+            # traceback.print_exc()
+            count = count + 1
+            print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+            continue
+
+    print('文件保存成功')
 
 
 def main():
     stock_list_url = 'http://quote.eastmoney.com/stocklist.html'
     stock_info_url = "https://gupiao.baidu.com/stock/"
-    output_file = '/Users/wangjiacan/Desktop/shawn/爬取资料/股票信息/'
+    file_path = '/Users/wangjiacan/Desktop/shawn/爬取资料/股票信息/'
+    file_name = 'BaiduStockInfo.txt'
     slist = []
-    slist_1 = ['sz002415']
+    slist_1 = ['sz300059',  'sz002415', 'sh166105', 'sh201005']
     # getStockList(slist, stock_list_url)
-    getStockInfo(slist_1, stock_info_url)
+    # print(slist)
+    start = time.time()
+    getStockInfo(slist_1, stock_info_url, file_path, file_name)
+    end = time.time()
+    time_consuming = time.strftime("%M:%S", time.localtime(end - start))
+    print(time_consuming)
 
 
 if __name__ == "__main__":
