@@ -4,7 +4,6 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import traceback
 import os
 import time
 
@@ -38,6 +37,8 @@ def getStockList(lst, stockURL):
 def getStockInfo(lst, stockURL, path, name):
     output_file = path + name
     count = 0
+    success_count = 0
+    failure_count = 0
 
     for stock in lst:
         url = stockURL + stock + '.html'
@@ -52,29 +53,37 @@ def getStockInfo(lst, stockURL, path, name):
             infoDict = {}
             soup = BeautifulSoup(html, 'html.parser')
 
-            name = soup.find_all(attrs={'class': 'bets-name'})[0]
-            infoDict.update({'股票名称': name.text.split()[0]})
-
             stockInfo = soup.find(attrs={'class': 'bets-content'})
             keyList = stockInfo.find_all('dt')
             valueList = stockInfo.find_all('dd')
-            for i in range(len(keyList)):
-                key = keyList[i].text.split()[0]
-                val = valueList[i].text.split()[0]
-                infoDict[key] = val
+            if keyList:
+                for i in range(len(keyList)):
+                    key = keyList[i].text.split()[0]
+                    val = valueList[i].text.split()[0]
+                    infoDict[key] = val
+            else:
+                count = count + 1
+                print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+                failure_count = failure_count + 1
+                continue
+
+            name = soup.find_all(attrs={'class': 'bets-name'})[0]
+            infoDict.update({'股票名称': name.text.split()[0]})
 
             with open(output_file, 'a', encoding='utf-8') as f:
                 f.write(str(infoDict) + '\n')
                 count = count + 1
-                print("\r当前进度:{:.2f}%".format(count*100/len(lst), end=""))
+                print("\r当前进度:{:.2f}%".format(count * 100 / len(lst), end=""))
+
+            success_count = success_count + 1
 
         except:
-            # traceback.print_exc()
             count = count + 1
             print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+            failure_count = failure_count + 1
             continue
 
-    print('文件保存成功')
+    print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
 
 
 def main():
@@ -83,11 +92,11 @@ def main():
     file_path = '/Users/wangjiacan/Desktop/shawn/爬取资料/股票信息/'
     file_name = 'BaiduStockInfo.txt'
     slist = []
-    slist_1 = ['sz300059',  'sz002415', 'sh166105', 'sh201005']
-    # getStockList(slist, stock_list_url)
-    # print(slist)
+    slist_1 = ['sh201005']
     start = time.time()
-    getStockInfo(slist_1, stock_info_url, file_path, file_name)
+    getStockList(slist, stock_list_url)
+    # print(slist)
+    getStockInfo(slist, stock_info_url, file_path, file_name)
     end = time.time()
     time_consuming = time.strftime("%M:%S", time.localtime(end - start))
     print(time_consuming)
