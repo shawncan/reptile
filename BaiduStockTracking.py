@@ -1,0 +1,113 @@
+#!/usr/local/Cellar/python3
+# -*- coding: utf-8 -*-
+
+import requests
+from bs4 import BeautifulSoup
+import re
+import os
+import time
+
+
+def getHTMLText(url, code="utf-8"):
+    try:
+        r = requests.get(url)
+        r.raise_for_status()
+        r.encoding = r.apparent_encoding
+        return r.text
+    except:
+        print("爬取失败")
+
+
+def getStockList(lst, stockURL):
+    html = getHTMLText(stockURL, "GB2312")
+    soup = BeautifulSoup(html, 'html.parser')
+    a = soup.find_all('a')
+    for i in a:
+        try:
+            href = i.attrs['href']
+            match = re.findall(r'[s][hz]\d{6}', href)
+            if match:
+                lst.append(match[0])
+            else:
+                continue
+        except:
+            continue
+
+
+def getStockTracking(lst, stockURL):
+    count = 0
+    success_count = 0
+    failure_count = 0
+
+    for stock in lst:
+        url = stockURL + stock + '.html'
+        html = getHTMLText(url)
+
+        try:
+            if html == "":
+                continue
+
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # name = soup.find_all(attrs={'class': 'bets-name'})[0]
+            # stock_name = name.text.split()[0]
+
+            # price = soup.find_all(attrs={'class': 'price s-down '})[0]
+            # price_s_down = price.text.split()
+            # stock_price = price_s_down[0]
+            # price_change = price_s_down[1]
+            # quote_change = price_s_down[2]
+
+            # volume = 0
+            # highest = 0
+            # turnover_rate = 0
+            # lowest = 0
+            # stockInfo = soup.find(attrs={'class': 'bets-content'})
+            # keyList = stockInfo.find_all('dt')
+            # valueList = stockInfo.find_all('dd')
+            # for i in range(len(keyList)):
+            #     key = keyList[i].text.split()[0]
+            #     val = valueList[i].text.split()[0]
+            #     if key == '成交量':
+            #         volume = val
+            #     elif key == '最高':
+            #         highest = val
+            #     elif key == '换手率':
+            #         turnover_rate = val
+            #     elif key == '最低':
+            #         lowest = val
+            #     else:
+            #         continue
+
+
+
+            # success_count = success_count + 1
+
+
+        except:
+            # count = count + 1
+            # print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+            # failure_count = failure_count + 1
+            continue
+
+    # print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
+
+
+def main():
+    stock_list_url = 'http://quote.eastmoney.com/stocklist.html'
+    stock_info_url = "https://gupiao.baidu.com/stock/"
+    slist = []
+
+    # start = time.time()
+    # getStockList(slist, stock_list_url)
+
+    slist_1 = ['sz002415']
+    getStockTracking(slist_1, stock_info_url)
+
+    # end = time.time()
+    # time_consuming = time.strftime("%M:%S", time.localtime(end - start))
+    # print(time_consuming)
+
+
+if __name__ == "__main__":
+    main()
