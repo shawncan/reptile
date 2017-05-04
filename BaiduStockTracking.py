@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 import time
+import pymysql
 
 
 def getHTMLText(url, code="utf-8"):
@@ -34,10 +35,31 @@ def getStockList(lst, stockURL):
             continue
 
 
+def mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate, quote_change):
+    db = pymysql.connect(host="127.0.0.1", user="root", password="shawn@0216", db="wjc_user", charset='utf8')
+    cursor = db.cursor()
+
+    sql = """
+                INSERT INTO StockTracking(crawl_time, stock_name, stock_price, price_change, 
+                highest, lowest, volume, turnover_rate, quote_change) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+
+    try:
+        cursor.execute(sql, (crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate, quote_change))
+        db.commit()
+    except:
+        db.rollback()
+
+    db.close()
+
+
+
 def getStockTracking(lst, stockURL):
     count = 0
     success_count = 0
     failure_count = 0
+    crawl_time = time.strftime("%Y/%m/%d", time.localtime(time.time()))
 
     for stock in lst:
         url = stockURL + stock + '.html'
@@ -49,48 +71,61 @@ def getStockTracking(lst, stockURL):
 
             soup = BeautifulSoup(html, 'html.parser')
 
-            # name = soup.find_all(attrs={'class': 'bets-name'})[0]
-            # stock_name = name.text.split()[0]
+            stockInfo = soup.find(attrs={'class': 'bets-content'})
+            keyList = stockInfo.find_all('dt')
+            valueList = stockInfo.find_all('dd')
 
-            # price = soup.find_all(attrs={'class': 'price s-down '})[0]
-            # price_s_down = price.text.split()
-            # stock_price = price_s_down[0]
-            # price_change = price_s_down[1]
-            # quote_change = price_s_down[2]
+            if keyList:
+                volume = 0
+                highest = 0
+                turnover_rate = 0
+                lowest = 0
 
-            # volume = 0
-            # highest = 0
-            # turnover_rate = 0
-            # lowest = 0
-            # stockInfo = soup.find(attrs={'class': 'bets-content'})
-            # keyList = stockInfo.find_all('dt')
-            # valueList = stockInfo.find_all('dd')
-            # for i in range(len(keyList)):
-            #     key = keyList[i].text.split()[0]
-            #     val = valueList[i].text.split()[0]
-            #     if key == '成交量':
-            #         volume = val
-            #     elif key == '最高':
-            #         highest = val
-            #     elif key == '换手率':
-            #         turnover_rate = val
-            #     elif key == '最低':
-            #         lowest = val
-            #     else:
-            #         continue
+                for i in range(len(keyList)):
+                    key = keyList[i].text.split()[0]
+                    val = valueList[i].text.split()[0]
+                    if key == '成交量':
+                        volume = val
+                    elif key == '最高':
+                        highest = val
+                    elif key == '换手率':
+                        turnover_rate = val
+                    elif key == '最低':
+                        lowest = val
+                    else:
+                        continue
 
+                name = soup.find_all(attrs={'class': 'bets-name'})[0]
+                stock_name = name.text.split()[0]
 
+                price = soup.find_all(attrs={'class': 'price s-down '})[0]
+                price_s_down = price.text.split()
+                stock_price = price_s_down[0]
+                price_change = price_s_down[1]
+                quote_change = price_s_down[2]
 
-            # success_count = success_count + 1
+                mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate,
+                      quote_change)
+
+                count = count + 1
+                print("\r当前进度:{:.2f}%".format(count * 100 / len(lst), end=""))
+                success_count = success_count + 1
+
+            else:
+                count = count + 1
+                print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+                failure_count = failure_count + 1
+                continue
+
 
 
         except:
-            # count = count + 1
-            # print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
-            # failure_count = failure_count + 1
+            count = count + 1
+            print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
+            failure_count = failure_count + 1
             continue
 
-    # print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
+    print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
 
 
 def main():
@@ -98,15 +133,14 @@ def main():
     stock_info_url = "https://gupiao.baidu.com/stock/"
     slist = []
 
-    # start = time.time()
-    # getStockList(slist, stock_list_url)
+    start = time.time()
+    getStockList(slist, stock_list_url)
 
-    slist_1 = ['sz002415']
-    getStockTracking(slist_1, stock_info_url)
+    getStockTracking(slist, stock_info_url)
 
-    # end = time.time()
-    # time_consuming = time.strftime("%M:%S", time.localtime(end - start))
-    # print(time_consuming)
+    end = time.time()
+    time_consuming = time.strftime("%M:%S", time.localtime(end - start))
+    print(time_consuming)
 
 
 if __name__ == "__main__":
