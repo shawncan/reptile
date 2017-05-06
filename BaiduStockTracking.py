@@ -4,7 +4,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import os
+import traceback
 import time
 import pymysql
 
@@ -13,7 +13,7 @@ def getHTMLText(url, code="utf-8"):
     try:
         r = requests.get(url)
         r.raise_for_status()
-        r.encoding = r.apparent_encoding
+        r.encoding = code
         return r.text
     except:
         print("爬取失败")
@@ -46,9 +46,11 @@ def mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, vo
                 """
 
     try:
-        cursor.execute(sql, (crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate, quote_change))
+        cursor.execute(sql, (crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate,
+                             quote_change))
         db.commit()
     except:
+        traceback.print_exc()
         db.rollback()
 
     db.close()
@@ -123,6 +125,7 @@ def getStockTracking(lst, stockURL):
             count = count + 1
             print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
             failure_count = failure_count + 1
+            traceback.print_exc()
             continue
 
     print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
@@ -135,11 +138,12 @@ def main():
 
     start = time.time()
     getStockList(slist, stock_list_url)
+    print("股票列表已爬取成功")
 
     getStockTracking(slist, stock_info_url)
 
     end = time.time()
-    time_consuming = time.strftime("%M:%S", time.localtime(end - start))
+    time_consuming = time.strftime("%H:%M:%S", time.localtime(end - start))
     print(time_consuming)
 
 
