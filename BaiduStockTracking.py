@@ -4,9 +4,9 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import traceback
 import time
 import pymysql
+import logging
 
 
 def getHTMLText(url, code="utf-8"):
@@ -50,7 +50,6 @@ def mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, vo
                              quote_change))
         db.commit()
     except:
-        traceback.print_exc()
         db.rollback()
 
     db.close()
@@ -62,6 +61,15 @@ def getStockTracking(lst, stockURL):
     success_count = 0
     failure_count = 0
     crawl_time = time.strftime("%Y/%m/%d", time.localtime(time.time()))
+
+    logging.basicConfig(level=logging.WARNING,
+                        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename='/Users/wangjiacan/Desktop/代码/log/BaiduStockTracking.txt',
+                        filemode='a')
+
+    logger = logging.getLogger()
+
 
     for stock in lst:
         url = stockURL + stock + '.html'
@@ -119,13 +127,11 @@ def getStockTracking(lst, stockURL):
                 failure_count = failure_count + 1
                 continue
 
-
-
-        except:
+        except Exception:
             count = count + 1
             print("\r当前进度: {:.2f}%".format(count * 100 / len(lst)), end="")
             failure_count = failure_count + 1
-            traceback.print_exc()
+            logger.exception("Crawling Baidu {} stock data failed".format(stock))
             continue
 
     print("数据爬取成功：爬取成功{}条数据，爬取失败{}条数据".format(success_count, failure_count))
