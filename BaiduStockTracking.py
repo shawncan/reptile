@@ -4,9 +4,9 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import time
 import pymysql
 import logging
+import datetime
 
 
 def getHTMLText(url, code="utf-8"):
@@ -60,7 +60,7 @@ def getStockTracking(lst, stockURL):
     count = 0
     success_count = 0
     failure_count = 0
-    crawl_time = time.strftime("%Y/%m/%d", time.localtime(time.time()))
+    crawl_time = datetime.datetime.now().strftime("%Y/%m/%d")
 
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -108,11 +108,19 @@ def getStockTracking(lst, stockURL):
                 name = soup.find_all(attrs={'class': 'bets-name'})[0]
                 stock_name = name.text.split()[0]
 
-                price = soup.find_all(attrs={'class': 'price s-down '})[0]
-                price_s_down = price.text.split()
-                stock_price = price_s_down[0]
-                price_change = price_s_down[1]
-                quote_change = price_s_down[2]
+                price = soup.find_all(attrs={'class': 'price s-up '})
+
+                if price:
+                    price_s_down = price[0].text.split()
+                    stock_price = price_s_down[0]
+                    price_change = price_s_down[1]
+                    quote_change = price_s_down[2]
+                else:
+                    price_1 = soup.find_all(attrs={'class': 'price s-down '})[0]
+                    price_s_down = price_1.text.split()
+                    stock_price = price_s_down[0]
+                    price_change = price_s_down[1]
+                    quote_change = price_s_down[2]
 
                 mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate,
                       quote_change)
@@ -142,15 +150,14 @@ def main():
     stock_info_url = "https://gupiao.baidu.com/stock/"
     slist = []
 
-    start = time.time()
+    start = datetime.datetime.now()
     getStockList(slist, stock_list_url)
     print("股票列表已爬取成功")
 
     getStockTracking(slist, stock_info_url)
 
-    end = time.time()
-    time_consuming = time.strftime("%H:%M:%S", time.localtime(end - start))
-    print(time_consuming)
+    end = datetime.datetime.now()
+    print(end - start)
 
 
 if __name__ == "__main__":
