@@ -108,16 +108,21 @@ def getStockTracking(lst, stockURL):
                 name = soup.find_all(attrs={'class': 'bets-name'})[0]
                 stock_name = name.text.split()[0]
 
-                price = soup.find_all(attrs={'class': 'price s-up '})
-
-                if price:
-                    price_s_down = price[0].text.split()
+                if soup.find_all(attrs={'class': 'price s-up '}):
+                    price_1 = soup.find_all(attrs={'class': 'price s-up '})[0]
+                    price_s_down = price_1.text.split()
+                    stock_price = price_s_down[0]
+                    price_change = price_s_down[1]
+                    quote_change = price_s_down[2]
+                elif soup.find_all(attrs={'class': 'price s-down '}):
+                    price_2 = soup.find_all(attrs={'class': 'price s-down '})[0]
+                    price_s_down = price_2.text.split()
                     stock_price = price_s_down[0]
                     price_change = price_s_down[1]
                     quote_change = price_s_down[2]
                 else:
-                    price_1 = soup.find_all(attrs={'class': 'price s-down '})[0]
-                    price_s_down = price_1.text.split()
+                    price_3 = soup.find_all(attrs={'class': 'price s-stop '})[0]
+                    price_s_down = price_3.text.split()
                     stock_price = price_s_down[0]
                     price_change = price_s_down[1]
                     quote_change = price_s_down[2]
@@ -152,7 +157,7 @@ def main():
 
     start = datetime.datetime.now()
     getStockList(slist, stock_list_url)
-    print("股票列表已爬取成功")
+    print("股票列表已爬取成功共{}条数据".format(len(slist)))
 
     getStockTracking(slist, stock_info_url)
 
