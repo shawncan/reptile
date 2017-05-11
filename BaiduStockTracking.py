@@ -45,11 +45,20 @@ def mysql(crawl_time, stock_name, stock_price, price_change, highest, lowest, vo
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
 
+    logging.basicConfig(level=logging.WARNING,
+                        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename='/Users/wangjiacan/Desktop/代码/log/BaiduStockTracking.txt',
+                        filemode='a')
+
+    logger = logging.getLogger()
+
     try:
         cursor.execute(sql, (crawl_time, stock_name, stock_price, price_change, highest, lowest, volume, turnover_rate,
                              quote_change))
         db.commit()
     except:
+        logger.exception("Crawling Baidu {} stock data failed".format(stock_name))
         db.rollback()
 
     db.close()
