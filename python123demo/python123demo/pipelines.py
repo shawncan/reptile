@@ -15,7 +15,7 @@ class Python123DemoPipeline(object):
 
     def process_item(self, item, spider):
         try:
-            line = item + '\n'
+            line = str(dict(item)) + '\n'
             self.f.write(line)
         except:
             pass

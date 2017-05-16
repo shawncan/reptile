@@ -10,9 +10,15 @@ class DemoSpider(scrapy.Spider):
 
     def parse(self, response):
         List = {}
-        for href in response.css('a::attr(href)').extract():
+        stock_list = response.css('.quotebody')
+        stock_name = stock_list.css('a[target="_blank"]::text').extract()
+        key_list = stock_list.css('a::attr(href)').extract()
+        for i in range(len(stock_name)):
             try:
-                stock = re.findall(r'[s][hz]\d{6}', href)[0]
-                yield stock
+                stock = re.findall(r'[s][hz]\d{6}', key_list[i])[0]
+                name = stock_name[i]
+                List[name] = stock
+                yield List
             except:
                 continue
+
