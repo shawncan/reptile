@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 import scrapy
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
 from tutorial.items import TutorialItem
 
 
 class DemoSpider(CrawlSpider):
     name = "demo"
-    start_urls = ['http://quotes.toscrape.com//']
+    allowed_domains = ['quotes.toscrape.com']
+    start_urls = ['http://quotes.toscrape.com']
 
-    rules = [
-        Rule(LinkExtractor(attrs=()))
-    ]
+    rules = (
+        Rule(LinkExtractor(allow='/page/\d?/', restrict_css='li.next'), callback='parse_item'),
+        Rule(LinkExtractor()),
+    )
 
     def parse_item(self, response):
         self.log('Hi, this is an item page! %s' % response.url)
@@ -22,4 +24,3 @@ class DemoSpider(CrawlSpider):
             item['text'] = quote.css('small.author::text').extract_first()
             item['link'] = quote.css('span > a::attr(href)').extract_first()
             yield item
-
