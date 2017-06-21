@@ -44,3 +44,10 @@ for i in q:
         print(funny_1)
 
 
+class QSBK(object):
+
+    def __init__(self):
+        self.pageIndex = 1
+        self.stories = [['Top1'], ['Top2'], ['Top3'], ['Top4'], ['Top5'], ['Top6'], ['Top7'], ['Top8'], ['Top9'],
+                        ['Top10']]
+        self.stats = []
