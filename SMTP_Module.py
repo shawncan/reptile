@@ -28,7 +28,7 @@ def mail():
     html_end = '码农：王小灿(ง⁼̴̀ω⁼̴́)ง⁼³₌₃ </pre></font>'
 
     my_sender = '784241389@qq.com'
-    my_pass = 'deeuhquhpmjebeff'
+    my_pass = '*******'
     my_user = '784241389@qq.com'
 
     msg = MIMEText(html_start + html_content + html_end, 'html', 'utf-8')
