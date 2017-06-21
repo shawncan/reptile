@@ -5,45 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def getHTMLText(url, code='UTF-8'):
-    try:
-        r = requests.get(url)
-        r.raise_for_status()
-        r.encoding = code
-        return r.text
-    except:
-        print("爬取失败")
-
-
-a = 'https://www.qiushibaike.com/hot/'
-
-html = getHTMLText(a)
-soup = BeautifulSoup(html, 'html.parser')
-
-q = soup.find_all('div', attrs={'class': 'article block untagged mb15'})
-
-for i in q:
-    img = i.find_all('div', attrs={'class': 'thumb'})
-
-    if img:
-        continue
-    else:
-        name = i.find('div', attrs={'class': 'author clearfix'})
-        content = i.find('div', attrs={'class': 'content'})
-        funny = i.find('span', attrs={'class': 'stats-vote'})
-
-        # 用户
-        name_2 = name.find('h2').text.split()[0]
-        # 内容
-        content_1 = content.find('span').text.split()[0]
-        # 好笑人数
-        funny_1 = funny.find('i').text.split()[0]
-
-        print(name_2)
-        print(content_1)
-        print(funny_1)
-
-
 class QSBK(object):
 
     def __init__(self):
@@ -51,3 +12,48 @@ class QSBK(object):
         self.stories = [['Top1'], ['Top2'], ['Top3'], ['Top4'], ['Top5'], ['Top6'], ['Top7'], ['Top8'], ['Top9'],
                         ['Top10']]
         self.stats = []
+
+    def getHTMLText(self):
+        try:
+            url = 'https://www.qiushibaike.com/hot/page/' + str(self.pageIndex)
+            r = requests.get(url)
+            r.raise_for_status()
+            r.encoding = 'UTF-8'
+            return r.text
+        except:
+            print("爬取失败")
+
+    def getContentExtraction(self):
+        html = self.getHTMLText()
+        soup = BeautifulSoup(html, 'html.parser')
+
+        Qiushi_module = soup.find_all('div', attrs={'class': 'article block untagged mb15'})
+
+        for i in Qiushi_module:
+            img = i.find_all('div', attrs={'class': 'thumb'})
+
+            if img:
+                continue
+            else:
+                content_module = i.find('div', attrs={'class': 'content'})
+                funny_module = i.find('span', attrs={'class': 'stats-vote'})
+
+                conten = content_module.find('span').text.split()[0]
+                funn = funny_module.find('i').text.split()[0]
+
+                if self.stats:
+                    self.stats.sort()
+                    if len(self.stats) == 10 and funn > self.stats[0]:
+                        self.stats.pop(0)
+                        self.stats.append(funn)
+
+                    elif len(self.stats) < 10:
+                        self.stats.append(funn)
+                    else:
+                        continue
+                else:
+                    self.stats.append(funn)
+
+
+spider = QSBK()
+spider.getContentExtraction()
