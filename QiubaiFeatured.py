@@ -39,20 +39,26 @@ class QSBK(object):
                 funny_module = i.find('span', attrs={'class': 'stats-vote'})
 
                 conten = content_module.find('span').text.split()[0]
-                funn = funny_module.find('i').text.split()[0]
+                funn = int(funny_module.find('i').text.split()[0])
 
                 if self.stats:
-                    self.stats.sort()
-                    if len(self.stats) == 10 and funn > self.stats[0]:
-                        self.stats.pop(0)
+                    list_length = len(self.stats)
+                    list_small = min(self.stats)
+                    position = self.stats.index(list_small)
+                    if list_length == 10 and funn > list_small:
+                        self.stats.insert(position, funn)
+                        self.stats.remove(list_small)
+                        self.stories[position].pop()
+                        self.stories[position].append(conten)
+                    elif list_length < 10:
                         self.stats.append(funn)
-
-                    elif len(self.stats) < 10:
-                        self.stats.append(funn)
+                        self.stories[list_length].append(conten)
                     else:
                         continue
                 else:
                     self.stats.append(funn)
+                    self.stories[0].append(conten)
+
 
 
 spider = QSBK()
