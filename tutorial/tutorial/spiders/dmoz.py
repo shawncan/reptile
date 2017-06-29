@@ -8,6 +8,8 @@ class DmozSpider(scrapy.Spider):
     start_urls = ['http://quotes.toscrape.com/']
 
     def parse(self, response):
+        self.logger.info('Hi, this is an author')
+
         for quote in response.css('div.quote'):
             item = TutorialItem()
             item['author'] = quote.css('span.text::text').re(r'\“(.*)\”')[0]
