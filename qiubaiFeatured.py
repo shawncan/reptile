@@ -15,14 +15,14 @@ class QSBK(object):
         self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0) Gecko/20100101 Firefox/53.0'
         self.headers = {'User-Agent': self.user_agent}
         # self.storepath = '/Users/wangjiacan/Desktop/代码/crawldata/qsbk.txt'
-        self.storepath = '/Users/wangjiacan/Desktop/代码/crawldata/qsbk.txt'
+        self.storepath = '/crawldata/qsbk.txt'
         self.enable = True
 
         logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S',
                             # filename='/Users/wangjiacan/Desktop/代码/log/QiubaiFeatured.txt',
-                            filename='/Users/wangjiacan/Desktop/代码/log/QiubaiFeatured.txt',
+                            filename='/log/QiubaiFeatured.txt',
                             filemode='a')
 
         self.logger = logging.getLogger()

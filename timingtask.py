@@ -3,7 +3,7 @@
 
 import time
 from apscheduler.schedulers.blocking import BlockingScheduler
-from QiubaiFeatured import QSBK
+from qiubaiFeatured import QSBK
 
 
 sched = BlockingScheduler()
