@@ -235,7 +235,7 @@ sp = passwd.decode()
 #     'rank': '0',
 #     'rankid': '',
 #     'style_type': '1',
-#     'text': '真测试下~',
+#     'text': '王灿灿正在努力吃全世界的狗粮，因为已经距离上次分手53天',
 #     'tid': ''
 # }
 # headers = {

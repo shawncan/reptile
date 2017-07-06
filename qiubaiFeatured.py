@@ -89,6 +89,7 @@ class QSBK(object):
                 for i in self.qs_ranking:
                     f.write(i['conten'] + "\n")
                 f.write("\n")
+                f.close()
         except Exception:
             self.logger.exception("File storage failed")
 
