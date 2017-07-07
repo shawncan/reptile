@@ -8,14 +8,13 @@ import logging
 
 
 class QSBK(object):
-
     def __init__(self):
         self.pageIndex = 1
         self.qs_ranking = []
         self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0) Gecko/20100101 Firefox/53.0'
         self.headers = {'User-Agent': self.user_agent}
         # self.storepath = '/Users/wangjiacan/Desktop/代码/crawldata/qsbk.txt'
-        self.storepath = '/crawldata/qsbk.txt'
+        self.storepath = '/opt/data/'
         self.enable = True
 
         logging.basicConfig(level=logging.WARNING,
@@ -83,8 +82,11 @@ class QSBK(object):
             self.logger.exception("Extract Page {numeral} data failed".format(numeral=self.pageIndex))
 
     def storeData(self):
+        file_time = time.strftime("%Y%m%d", time.localtime())
+        file_path = self.storepath + 'qiubai_' + file_time + '.txt'
+
         try:
-            with open(self.storepath, 'a') as f:
+            with open(file_path, 'a') as f:
                 f.write(time.strftime("%Y-%m-%d", time.localtime()) + "\n")
                 for i in self.qs_ranking:
                     f.write(i['conten'] + "\n")
@@ -92,7 +94,6 @@ class QSBK(object):
                 f.close()
         except Exception:
             self.logger.exception("File storage failed")
-
 
     def start(self):
         while self.enable:
