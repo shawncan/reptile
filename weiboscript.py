@@ -5,29 +5,47 @@ import requests
 import base64
 import rsa
 import binascii
+import random
+import string
+import smtplib
+from email.mime.text import MIMEText
 
 
 class autoWeibo(object):
     def __init__(self):
+        """
+        此函数用设置改脚本里的基础url、账号、参数
+        """
+        ''''脚本中需要请求的url'''
         self.parameter_url = 'https://login.sina.com.cn/sso/prelogin.php'
         self.ticket_url = 'https://login.sina.com.cn/sso/login.php?client=ssologin.js(v1.4.18)&_=1499149326610&openapilogin=qrcode'
+        self.verification_url = 'https://login.sina.com.cn/cgi/pin.php'
         self.code_url = 'https://api.weibo.com/oauth2/authorize'
         self.access_token_url = 'https://api.weibo.com/oauth2/access_token'
+        self.weibo_url = 'https://api.weibo.com/2/statuses/share.json'
 
-        self.app_key = '****'
-        self.app_secret = '****'
-        self.redirect_uri = 'https://api.weibo.com/oauth2/default.html'
-        self.username = '****'
-        self.password = '****'
+        ''''脚本中需要用到的开发者账号key、secret、redirect_uri、账号密码、邮件的账号密码、授权码'''
+        self.app_key = '*****'
+        self.app_secret = '*****'
+        self.redirect_uri = '*****'
+        self.username = '*****'
+        self.password = '*****'
+        self.my_sender = '*****'
+        self.my_pass = '*****'
+        self.my_user = '*****'
 
+        ''''脚本中需要用到的基础参数'''
         self.su = ''
         self.sp = ''
         self.servertime = ''
+        self.pcid = ''
         self.nonce = ''
         self.pubket = ''
         self.rsakv = ''
         self.code = ''
         self.access_token = ''
+        self.door = ''
+        self.ticket = ''
 
     def getParameter(self):
         """
@@ -54,6 +72,7 @@ class autoWeibo(object):
         parameter_resp = requests.get(self.parameter_url, params=params)
         parameter = parameter_resp.text.split(',')
         self.servertime = parameter[1].split(':')[1]
+        self.pcid = parameter[2].split(':')[1][1:-1]
         self.nonce = parameter[3].split(':')[1][1:-1]
         self.pubket = parameter[4].split(':')[1][1:-1]
         self.rsakv = parameter[5].split(':')[1][1:-1]
@@ -67,11 +86,9 @@ class autoWeibo(object):
         passwd = binascii.b2a_hex(pw_encypted)
         self.sp = passwd.decode()
 
-    def getCode(self):
+    def getTicket(self):
         """
-        此函数用作获取微博登录应用授权的code
-        ticket为授权时必要的参数
-        code为获取access_token必要参数
+        此函数用作获取微博登录需要的参数ticket
         """
         '''获得ticket'''
         ticket_Para = {
@@ -79,7 +96,7 @@ class autoWeibo(object):
             'cdult': '2',
             'ct': '1800',
             'domain': 'weibo.com',
-            'door': '',
+            'door': self.door,
             'encoding': 'UTF-8',
             'entry': 'openapi',
             'from': '',
@@ -103,8 +120,68 @@ class autoWeibo(object):
         }
 
         req = requests.post(self.ticket_url, data=ticket_Para)
-        ticket = req.json()['ticket']
+        status = req.json()
+        print(status)
 
+        retcode = status['retcode']
+        if retcode == '0':
+            self.ticket = status['ticket']
+        else:
+            digital = ''.join(random.sample(string.digits, 8))
+            verification_code_url = self.verification_url + '?r=' + digital + '&s=0&p=' + self.pcid
+            print(verification_code_url)
+
+
+    def getSafetyTicket(self):
+        """
+        此函数用作当微博登录需要验证码时，来获取微博登录需要的参数ticket
+        """
+        '''获得ticket'''
+        ticket_Para = {
+            'appkey': '45d1VI',
+            'cdult': '2',
+            'ct': '1800',
+            'domain': 'weibo.com',
+            'door': self.door,
+            'encoding': 'UTF-8',
+            'entry': 'openapi',
+            'from': '',
+            'gateway': '1',
+            'nonce': self.nonce,
+            'pagerefer': '',
+            'pcid': self.pcid,
+            'prelt': '1381',
+            'pwencode': 'rsa2',
+            'returntype': 'TEXT',
+            'rsakv': self.rsakv,
+            's': '1',
+            'savestate': '0',
+            'servertime': self.servertime,
+            'service': 'miniblog',
+            'sp': self.sp,
+            'sr': '1440*900',
+            'su': self.su,
+            'useticket': '1',
+            'vsnf': '1',
+            'vsnval': '',
+        }
+
+        req = requests.post(self.ticket_url, data=ticket_Para)
+        status = req.json()
+
+        retcode = status['retcode']
+        if retcode == '0':
+            self.ticket = status['ticket']
+        else:
+            digital = ''.join(random.sample(string.digits, 8))
+            verification_code_url = self.verification_url + '?r=' + digital + '&s=0&p=' + self.pcid
+            print(verification_code_url)
+
+    def getCode(self):
+        """
+        此函数用作获取微博登录应用授权的code
+        code为获取access_token必要参数
+        """
         '''获得code'''
         code_Data = {
             'action': 'login',
@@ -122,7 +199,7 @@ class autoWeibo(object):
             'scope': '',
             'state': '',
             'switchLogin': '0',
-            'ticket': ticket,
+            'ticket': self.ticket,
             'userId': '',
             'verifyToken': 'null',
             'withOfficalAccount': '',
@@ -142,6 +219,7 @@ class autoWeibo(object):
         此函数用作获取微博接口调用时的access_token
         access_token为调用接口时必要的参数
         """
+        '''获得access_token'''
         access_token_Data = {
             'client_id': self.app_key,
             'client_secret': self.app_secret,
@@ -153,12 +231,42 @@ class autoWeibo(object):
         r = requests.post(self.access_token_url, data=access_token_Data)
         self.access_token = r.json()['access_token']
 
+    def mail(self):
+        """
+        此函数用作用来在登录需要验证码的时候提醒开发者
+        """
+        '''发送提醒邮件'''
+        msg = MIMEText('自动微博发送失败，请去服务器填写验证码', 'html', 'utf-8')
+        msg["Subject"] = "微博脚本运行提醒邮件"
+        msg["From"] = self.my_sender
+        msg["To"] = self.my_user
+
+        try:
+            server = smtplib.SMTP_SSL("smtp.qq.com", 465)
+            server.login(self.my_sender, self.my_pass)
+            server.sendmail(self.my_sender, self.my_user, msg.as_string())
+            server.quit()
+            print('邮件发送成功')
+        except Exception:
+            print('邮件发送失败')
+
     def start(self):
+        """
+        此函数用作用来发送微博
+        """
         self.getParameter()
+        self.getTicket()
+
+        while not self.ticket.strip():
+            self.mail()
+            self.door = input("请输入验证码:")
+            self.getSafetyTicket()
+
         self.getCode()
         self.getAccesstoken()
 
-        path = '****/count.txt'
+        '''发送微博'''
+        path = '/Users/wangjiacan/Desktop/code/count.txt'
         with open(path, 'r') as f:
             lines = f.readlines()
             last_line = lines[-1]
@@ -169,7 +277,7 @@ class autoWeibo(object):
             'status': '王灿灿正在努力吃全世界的狗粮，因为已经距离上次分手' + str(days) + '天。http://wangjiacan.com'
         }
 
-        weibo = requests.post('https://api.weibo.com/2/statuses/share.json', data=weibo_Data)
+        weibo = requests.post(self.weibo_url, data=weibo_Data)
 
         try:
             created_at = weibo.json()['created_at']
@@ -181,7 +289,8 @@ class autoWeibo(object):
                     f.write(str(days) + "\n")
                     f.close()
         except Exception:
-            print("运行失败")
+                print("微博发送失败")
+
 
 spider = autoWeibo()
 spider.start()
