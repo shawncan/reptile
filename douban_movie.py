@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import logging
+import urllib.parse
 
 
 class DBDY(object):
@@ -13,14 +14,13 @@ class DBDY(object):
         self.dbdy_url = 'https://movie.douban.com/top250?start=' + str(self.page) + '&filter='
         self.movie_information = {'排名': '', '电影': '', '上映时间': '', '国家': '', '简介': '', '播放地址': '', }
         self.movie_name = ''
-        self.movie_details = 'https://movie.douban.com/subject/1292052/'
+        self.movie_details = ''
         self.aiqiyi_url = ''
 
         logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S',
-                            filename='/Users/wangjiacan/Desktop/code/log/DBDS.txt',
-                            # filename='/log/QiubaiFeatured.txt',
+                            filename='/Users/wangjiacan/Desktop/代码/log/DBDS.txt',
                             filemode='a')
 
         self.logger = logging.getLogger()
@@ -43,7 +43,9 @@ class DBDY(object):
             platform = playBtn[i].attrs['data-cn']
             target_platform = '爱奇艺视频'
             if platform == target_platform:
-                print(playBtn[i].attrs['href'])
+                aqy_url = playBtn[i].attrs['href']
+                play_url = re.findall(r'url=.*\.html', urllib.parse.unquote(aqy_url))[0].split('=')[1]
+                self.movie_information['播放地址'] = play_url
             else:
                 continue
 
@@ -75,15 +77,12 @@ class DBDY(object):
                 self.movie_information['上映时间'] = release_time
                 self.movie_information['国家'] = film_origin
                 self.movie_information['简介'] = movie_synopsi
-                self.movie_information['播放地址'] = self.aiqiyi_url
                 print(self.movie_information)
 
+            self.page += 25
         except Exception:
             self.logger.exception("Download Page {numeral} Code failed".format(numeral=self.movie_name))
 
+
 spider = DBDY()
-spider.getLinkExtraction()
-
-
-
-
+spider.getContentExtraction()
