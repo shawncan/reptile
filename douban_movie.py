@@ -6,16 +6,18 @@ from bs4 import BeautifulSoup
 import re
 import logging
 import urllib.parse
+import xlsxwriter
 
 
 class DBDY(object):
     def __init__(self):
         self.page = 0
-        self.dbdy_url = 'https://movie.douban.com/top250?start=' + str(self.page) + '&filter='
-        self.movie_information = {'排名': '', '电影': '', '上映时间': '', '国家': '', '简介': '', '播放地址': '', }
+        self.dbdy_url = ''
+        self.movie_list = []
         self.movie_name = ''
         self.movie_details = ''
-        self.aiqiyi_url = ''
+        self.row = 1
+        self.enable = True
 
         logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -34,7 +36,7 @@ class DBDY(object):
         except Exception:
             self.logger.exception("Download Page {numeral} Code failed".format(numeral=self.page))
 
-    def getLinkExtraction(self):
+    def getLinkExtraction(self, data):
         html = self.getHTMLText(self.movie_details)
         soup = BeautifulSoup(html, 'html.parser')
         playBtn = soup.find_all(attrs={'class': "playBtn"})
@@ -45,7 +47,7 @@ class DBDY(object):
             if platform == target_platform:
                 aqy_url = playBtn[i].attrs['href']
                 play_url = re.findall(r'url=.*\.html', urllib.parse.unquote(aqy_url))[0].split('=')[1]
-                self.movie_information['播放地址'] = play_url
+                data['播放地址'] = play_url
             else:
                 continue
 
@@ -61,6 +63,8 @@ class DBDY(object):
             item = ranking.find_all('div', attrs={'class': "item"})
 
             for i in range(len(details)):
+                movie_data = {'排名': '', '电影': '', '上映时间': '', '国家': '', '简介': '', '播放地址': '', }
+
                 self.movie_name = details[i].img.attrs['alt']
                 self.movie_details = details[i].a.attrs['href']
                 movie_rankings = details[i].em.text
@@ -70,19 +74,62 @@ class DBDY(object):
 
                 movie_resources = re.findall(r'\[.*\]', item[i].text)
                 if movie_resources:
-                    self.getLinkExtraction()
+                    self.getLinkExtraction(movie_data)
 
-                self.movie_information['排名'] = movie_rankings
-                self.movie_information['电影'] = self.movie_name
-                self.movie_information['上映时间'] = release_time
-                self.movie_information['国家'] = film_origin
-                self.movie_information['简介'] = movie_synopsi
-                print(self.movie_information)
+                movie_data['排名'] = movie_rankings
+                movie_data['电影'] = self.movie_name
+                movie_data['上映时间'] = release_time
+                movie_data['国家'] = film_origin
+                movie_data['简介'] = movie_synopsi
+
+                self.movie_list.append(movie_data)
+
+            next = soup.find_all('link', attrs={'rel': "next"})
+            if not next:
+                self.enable = False
 
             self.page += 25
+            print(self.page)
         except Exception:
             self.logger.exception("Download Page {numeral} Code failed".format(numeral=self.movie_name))
 
+    def start(self):
+        try:
+            workbook = xlsxwriter.Workbook('/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_movie.xlsx')
+            worksheet = workbook.add_worksheet()
+
+            dbdy_list = ['排名', '国家', '上映时间', '电影', '简介', '播放地址', ]
+            col = 0
+
+            worksheet.set_column('B:B', 15)
+            worksheet.set_column('D:D', 20)
+            worksheet.set_column('E:E', 50)
+            worksheet.set_column('F:F', 50)
+
+            worksheet.write('A1', dbdy_list[0])
+            worksheet.write('B1', dbdy_list[1])
+            worksheet.write('C1', dbdy_list[2])
+            worksheet.write('D1', dbdy_list[3])
+            worksheet.write('E1', dbdy_list[4])
+            worksheet.write('F1', dbdy_list[5])
+
+            while self.enable:
+                self.dbdy_url = 'https://movie.douban.com/top250?start=' + str(self.page) + '&filter='
+                self.getContentExtraction()
+
+                for movie in self.movie_list:
+                    for i in dbdy_list:
+                        worksheet.write(self.row, col, movie[i])
+                        col += 1
+                    col = 0
+                    self.row += 1
+
+                self.movie_list.clear()
+
+            workbook.close()
+        except Exception:
+            self.logger.exception("Writing data {name} failed".format(name=self.movie_name))
+
 
 spider = DBDY()
-spider.getContentExtraction()
+spider.start()
