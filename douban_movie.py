@@ -11,6 +11,16 @@ import xlsxwriter
 
 class DBDY(object):
     def __init__(self):
+        """
+        属性：
+        page：页面链接的数量
+        dbdy_url：页面链接
+        movie_list：页面电影信息列表
+        movie_name：电影名称
+        movie_details：电影详情页链接
+        row：表格纵向坐标
+        enable：程序运营开关
+        """
         self.page = 0
         self.dbdy_url = ''
         self.movie_list = []
@@ -28,6 +38,9 @@ class DBDY(object):
         self.logger = logging.getLogger()
 
     def getHTMLText(self, url):
+        """
+        下载网页信息代码
+        """
         try:
             r = requests.get(url)
             r.raise_for_status()
@@ -37,21 +50,30 @@ class DBDY(object):
             self.logger.exception("Download Page {numeral} Code failed".format(numeral=self.page))
 
     def getLinkExtraction(self, data):
-        html = self.getHTMLText(self.movie_details)
-        soup = BeautifulSoup(html, 'html.parser')
-        playBtn = soup.find_all(attrs={'class': "playBtn"})
+        """
+        提取电影的播放地址
+        """
+        try:
+            html = self.getHTMLText(self.movie_details)
+            soup = BeautifulSoup(html, 'html.parser')
+            playBtn = soup.find_all(attrs={'class': "playBtn"})
 
-        for i in range(len(playBtn)):
-            platform = playBtn[i].attrs['data-cn']
-            target_platform = '爱奇艺视频'
-            if platform == target_platform:
-                aqy_url = playBtn[i].attrs['href']
-                play_url = re.findall(r'url=.*\.html', urllib.parse.unquote(aqy_url))[0].split('=')[1]
-                data['播放地址'] = play_url
-            else:
-                continue
+            for i in range(len(playBtn)):
+                platform = playBtn[i].attrs['data-cn']
+                target_platform = '爱奇艺视频'
+                if platform == target_platform:
+                    aqy_url = playBtn[i].attrs['href']
+                    play_url = re.findall(r'url=.*\.html', urllib.parse.unquote(aqy_url))[0].split('=')[1]
+                    data['播放地址'] = play_url
+                else:
+                    continue
+        except Exception:
+            self.logger.exception("{name} play address extraction failed".format(name=self.movie_name))
 
     def getContentExtraction(self):
+        """
+        提取需要爬取的电影的信息
+        """
         html = self.getHTMLText(self.dbdy_url)
         soup = BeautifulSoup(html, 'html.parser')
 
@@ -59,7 +81,7 @@ class DBDY(object):
             ranking = soup.find('ol')
             details = ranking.find_all('div', attrs={'class': "pic"})
             movie_information = ranking.find_all('p', attrs={'class': ""})
-            inq = ranking.find_all('span', attrs={'class': "inq"})
+            bd = ranking.find_all('div', attrs={'class': "bd"})
             item = ranking.find_all('div', attrs={'class': "item"})
 
             for i in range(len(details)):
@@ -70,7 +92,12 @@ class DBDY(object):
                 movie_rankings = details[i].em.text
                 release_time = re.findall(r'\d{4}', movie_information[i].text)[0]
                 film_origin = re.findall(r'/\xa0.*\xa0/', movie_information[i].text)[0][2:-2]
-                movie_synopsi = inq[i].text
+
+                inq = re.findall(r'\<span class\=\"inq\"\>.*\<\/span\>', str(bd[i]))
+                if inq:
+                    movie_synopsi = inq[0][18:-7]
+                else:
+                    movie_synopsi = ""
 
                 movie_resources = re.findall(r'\[.*\]', item[i].text)
                 if movie_resources:
@@ -83,17 +110,20 @@ class DBDY(object):
                 movie_data['简介'] = movie_synopsi
 
                 self.movie_list.append(movie_data)
+                print("\r当前进度: {:.2f}%".format(int(movie_rankings) * 100 / 250), end="")
 
             next = soup.find_all('link', attrs={'rel': "next"})
             if not next:
                 self.enable = False
 
             self.page += 25
-            print(self.page)
         except Exception:
-            self.logger.exception("Download Page {numeral} Code failed".format(numeral=self.movie_name))
+            self.logger.exception("Download Page {name} Code failed".format(name=self.movie_name))
 
     def start(self):
+        """
+        插入信息至表格中
+        """
         try:
             workbook = xlsxwriter.Workbook('/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_movie.xlsx')
             worksheet = workbook.add_worksheet()
@@ -103,8 +133,8 @@ class DBDY(object):
 
             worksheet.set_column('B:B', 15)
             worksheet.set_column('D:D', 20)
-            worksheet.set_column('E:E', 50)
-            worksheet.set_column('F:F', 50)
+            worksheet.set_column('E:E', 80)
+            worksheet.set_column('F:F', 55)
 
             worksheet.write('A1', dbdy_list[0])
             worksheet.write('B1', dbdy_list[1])
@@ -113,6 +143,7 @@ class DBDY(object):
             worksheet.write('E1', dbdy_list[4])
             worksheet.write('F1', dbdy_list[5])
 
+            print("豆瓣爬虫爬取开始...")
             while self.enable:
                 self.dbdy_url = 'https://movie.douban.com/top250?start=' + str(self.page) + '&filter='
                 self.getContentExtraction()
@@ -127,6 +158,7 @@ class DBDY(object):
                 self.movie_list.clear()
 
             workbook.close()
+            print("豆瓣爬虫爬取结束...")
         except Exception:
             self.logger.exception("Writing data {name} failed".format(name=self.movie_name))
 
