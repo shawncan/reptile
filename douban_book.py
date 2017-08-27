@@ -5,7 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import logging
-import urllib.parse
 import openpyxl
 import threading
 import queue
@@ -15,6 +14,9 @@ import os
 
 
 def getHTMLText(url):
+    """
+    下载目标网页源码
+    """
     try:
         r = requests.get(url)
         r.raise_for_status()
@@ -25,6 +27,9 @@ def getHTMLText(url):
 
 
 def getHTMLUrl(url):
+    """
+    提取所有需要爬取信息的网页链接
+    """
     html = getHTMLText(url)
     soup = BeautifulSoup(html, 'html.parser')
     try:
@@ -42,6 +47,9 @@ def getHTMLUrl(url):
 
 
 def getContentExtraction(url):
+    """
+    提取目标网页中的书名、作者、评分、评价人数、评语的信息并保存到Excel
+    """
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book.xlsx'
     book_list = []
     html = getHTMLText(url)
@@ -100,6 +108,7 @@ def getContentExtraction(url):
                 sheet["D%d" % (row + i + 1)].value = book_list[i]['评价人数']
                 sheet["E%d" % (row + i + 1)].value = book_list[i]['评语']
             workbook.save(pata)
+        print("\r第{number}页数据爬取结束".format(number=number, end=""))
         mutex.release()
     except Exception:
         logger.exception("Extract page {number} message failed".format(number=number))
