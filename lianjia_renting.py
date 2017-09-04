@@ -9,7 +9,6 @@ import openpyxl
 import threading
 import queue
 import datetime
-import time
 import os
 
 
@@ -27,6 +26,9 @@ def getHTMLText(url):
 
 
 def getHTMKUrl(url):
+    """
+    提取萧山、滨江待爬取的租房网页链接
+    """
     html = getHTMLText(url)
     soup = BeautifulSoup(html, 'html.parser')
     try:
@@ -39,7 +41,10 @@ def getHTMKUrl(url):
         logger.exception("Site link extraction failed")
 
 
-def getContentExtraction(url_path):
+def getContentExtraction(url_path, num):
+    """
+    提取每个网页中中的租房链接、租房标题、租金、小区名、户型、平方、朝向、更新时间、装修的信息并保存到Excel
+    """
     aims_url = 'https://hz.lianjia.com' + url_path
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/lianjia_renting.xlsx'
     renting_list = []
@@ -88,38 +93,39 @@ def getContentExtraction(url_path):
 
             renting_list.append(renting_data)
 
-            mutex.acquire()
-            if not os.path.exists(pata):
-                workbook = openpyxl.Workbook()
-                sheet = workbook.active
-                for x in range(len(renting_list)):
-                    sheet["A%d" % (x + 1)].value = renting_list[x]['更新时间']
-                    sheet["B%d" % (x + 1)].value = renting_list[x]['租房标题']
-                    sheet["C%d" % (x + 1)].value = renting_list[x]['租金']
-                    sheet["D%d" % (x + 1)].value = renting_list[x]['小区名']
-                    sheet["E%d" % (x + 1)].value = renting_list[x]['户型']
-                    sheet["F%d" % (x + 1)].value = renting_list[x]['平方']
-                    sheet["G%d" % (x + 1)].value = renting_list[x]['朝向']
-                    sheet["H%d" % (x + 1)].value = renting_list[x]['租房链接']
-                workbook.save(pata)
-            else:
-                workbook = openpyxl.load_workbook(pata)
-                sheet = workbook.get_sheet_by_name(workbook.get_sheet_names()[0])
-                row = sheet.max_row
-                for x in range(len(renting_list)):
-                    sheet["A%d" % (row + x + 1)].value = renting_list[x]['更新时间']
-                    sheet["B%d" % (row + x + 1)].value = renting_list[x]['租房标题']
-                    sheet["C%d" % (row + x + 1)].value = renting_list[x]['租金']
-                    sheet["D%d" % (row + x + 1)].value = renting_list[x]['小区名']
-                    sheet["E%d" % (row + x + 1)].value = renting_list[x]['户型']
-                    sheet["F%d" % (row + x + 1)].value = renting_list[x]['平方']
-                    sheet["G%d" % (row + x + 1)].value = renting_list[x]['朝向']
-                    sheet["H%d" % (row + x + 1)].value = renting_list[x]['租房链接']
-                workbook.save(pata)
-            mutex.release()
+        mutex.acquire()
+        if not os.path.exists(pata):
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            for x in range(len(renting_list)):
+                sheet["A%d" % (x + 1)].value = renting_list[x]['更新时间']
+                sheet["B%d" % (x + 1)].value = renting_list[x]['租房标题']
+                sheet["C%d" % (x + 1)].value = renting_list[x]['租金']
+                sheet["D%d" % (x + 1)].value = renting_list[x]['小区名']
+                sheet["E%d" % (x + 1)].value = renting_list[x]['户型']
+                sheet["F%d" % (x + 1)].value = renting_list[x]['平方']
+                sheet["G%d" % (x + 1)].value = renting_list[x]['朝向']
+                sheet["H%d" % (x + 1)].value = renting_list[x]['租房链接']
+            workbook.save(pata)
+        else:
+            workbook = openpyxl.load_workbook(pata)
+            sheet = workbook.get_sheet_by_name(workbook.get_sheet_names()[0])
+            row = sheet.max_row
+            for x in range(len(renting_list)):
+                sheet["A%d" % (row + x + 1)].value = renting_list[x]['更新时间']
+                sheet["B%d" % (row + x + 1)].value = renting_list[x]['租房标题']
+                sheet["C%d" % (row + x + 1)].value = renting_list[x]['租金']
+                sheet["D%d" % (row + x + 1)].value = renting_list[x]['小区名']
+                sheet["E%d" % (row + x + 1)].value = renting_list[x]['户型']
+                sheet["F%d" % (row + x + 1)].value = renting_list[x]['平方']
+                sheet["G%d" % (row + x + 1)].value = renting_list[x]['朝向']
+                sheet["H%d" % (row + x + 1)].value = renting_list[x]['租房链接']
+            workbook.save(pata)
+        print("\r第{number}页数据爬取结束".format(number=num, end=""))
+        mutex.release()
 
     except Exception:
-        logger.exception("Extract page {number} message failed".format(number=number))
+        logger.exception("Extract page {number} message failed".format(number=num))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING,
@@ -133,17 +139,20 @@ if __name__ == '__main__':
 
     lianjia_url = ['https://hz.lianjia.com/zufang/binjiang/', 'https://hz.lianjia.com/zufang/xiaoshan/']
     number = 0
+    threads = []
     mutex = threading.Lock()
 
     print("链家租房爬虫爬取开始...")
     start = datetime.datetime.now()
     for lj_url in lianjia_url:
         getHTMKUrl(lj_url)
-    for i in range(url_queue.qsize()):
+    for t in range(url_queue.qsize()):
         number += 1
-        t = threading.Thread(target=getContentExtraction, args=(url_queue.get(),))
+        threads.append(threading.Thread(target=getContentExtraction, args=(url_queue.get(), number)))
+    for t in threads:
         t.start()
+    for t in threads:
+        t.join()
     end = datetime.datetime.now()
-    time.sleep(20)
     print("\n链家租房爬虫爬取结束...")
     print('运行时间：{time}'.format(time=(end - start)))
