@@ -57,7 +57,6 @@ def getContentExtraction(url_path, num):
         price_pre = ul.find_all(attrs={'class': 'price-pre'})
         where = ul.find_all(attrs={'class': 'where'})
         view_label = ul.find_all(attrs={'class': 'view-label left'})
-        # print(where[0].span.text.split()[0])
         for i in range(len(renting_info)):
             renting_data = {'租房链接': '', '租房标题': '', '租金': '', '小区名': '', '户型': '', '平方': '', '朝向': '', '更新时间': '', '装修': '', }
             # 租房链接、租房标题
