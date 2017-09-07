@@ -53,7 +53,7 @@ def getHTMLUrl(url, url_list):
     提取所有需要爬取信息的网页链接
     """
     page_num = 0
-    tag_url = 'https://book.douban.com/' + url
+    tag_url = 'https://book.douban.com' + url
     url_list.append(url)
 
     html = getHTMLText(tag_url)
@@ -77,57 +77,54 @@ def getContentExtraction(url):
     提取目标网页中的书名、作者、评分、评价人数、评语的信息并保存到Excel
     """
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book_pro.xlsx'
-    page_url = 'https://book.douban.com/' + url
+    page_url = 'https://book.douban.com' + url
     book_list = []
     html = getHTMLText(page_url)
     soup = BeautifulSoup(html, 'html.parser')
 
     try:
         subject_list = soup.find(attrs={'class': 'subject-list'})
+        content = soup.find_all(attrs={'id': 'content'})[0].h1.text.split(" ")[1]
         h2 = subject_list.find_all('h2')
-        print(len(h2))
-        print(h2[0].a.attrs['title'])
+        pub = subject_list.find_all(attrs={'class': 'pub'})
+        rating_nums = subject_list.find_all(attrs={'class': 'rating_nums'})
+        pl = subject_list.find_all(attrs={'class': 'pl'})
 
-        # for i in range(len(pl2)):
-        #     book_data = {'书名': '', '作者': '', '评分': '', '评价人数': '',}
-        #
-        #     book_name = pl2[i].a.attrs['title']
-        #     book_information = pl[i].text
-        #     author = book_information.split('/')[0]
-        #     score = rating_nums[i].text
-        #     number_of_comments = re.findall(r'\d*人评价', str(span_pl[i]))[0]
-        #
-        #     book_data['书名'] = book_name
-        #     book_data['作者'] = author
-        #     book_data['评分'] = score
-        #     book_data['评价人数'] = number_of_comments
-        #
-        #     book_list.append(book_data)
-        # print(book_list)
+        for i in range(len(h2)):
+            book_data = {'标签': '', '书名': '', '作者': '', '评分': '', '评价人数': '', }
+
+            score = rating_nums[i].text
+            comment = re.findall(r'\d*人评价', str(pl[i]))[0][:-3]
+
+            if int(comment) < 20000:
+                continue
+            if float(score) < 8.6:
+                continue
+
+            book_name = h2[i].a.attrs['title']
+            author = pub[i].text.split("  ")[6].split("/")[0]
+            number_of_comments = re.findall(r'\d*人评价', str(pl[i]))[0]
+
+            book_data['标签'] = content
+            book_data['书名'] = book_name
+            book_data['作者'] = author
+            book_data['评分'] = score
+            book_data['评价人数'] = number_of_comments
+
+            book_list.append(book_data)
 
         # mutex.acquire()
-        # if not os.path.exists(pata):
-        #     workbook = openpyxl.Workbook()
-        #     sheet = workbook.active
-        #     for i in range(len(book_list)):
-        #         sheet["A%d" % (i + 1)].value = book_list[i]['书名']
-        #         sheet["B%d" % (i + 1)].value = book_list[i]['作者']
-        #         sheet["C%d" % (i + 1)].value = book_list[i]['评分']
-        #         sheet["D%d" % (i + 1)].value = book_list[i]['评价人数']
-        #         sheet["E%d" % (i + 1)].value = book_list[i]['评语']
-        #     workbook.save(pata)
-        # else:
-        #     workbook = openpyxl.load_workbook(pata)
-        #     sheet = workbook.get_sheet_by_name(workbook.get_sheet_names()[0])
-        #     row = sheet.max_row
-        #     for i in range(len(book_list)):
-        #         sheet["A%d" % (row + i + 1)].value = book_list[i]['书名']
-        #         sheet["B%d" % (row + i + 1)].value = book_list[i]['作者']
-        #         sheet["C%d" % (row + i + 1)].value = book_list[i]['评分']
-        #         sheet["D%d" % (row + i + 1)].value = book_list[i]['评价人数']
-        #         sheet["E%d" % (row + i + 1)].value = book_list[i]['评语']
-        #     workbook.save(pata)
-        # print("\r第{number}页数据爬取结束".format(number=number, end=""))
+        page_workbook = openpyxl.load_workbook(pata)
+        page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
+        row = sheet.max_row
+        for i in range(len(book_list)):
+            page_sheet["A%d" % (row + i + 1)].value = book_list[i]['标签']
+            page_sheet["B%d" % (row + i + 1)].value = book_list[i]['书名']
+            page_sheet["C%d" % (row + i + 1)].value = book_list[i]['作者']
+            page_sheet["D%d" % (row + i + 1)].value = book_list[i]['评分']
+            page_sheet["E%d" % (row + i + 1)].value = book_list[i]['评价人数']
+        page_workbook.save(pata)
+        print("\r{url}数据爬取完成...".format(url=page_url, end=""))
         # mutex.release()
     except Exception:
         logger.exception("Extract page {number} message failed".format(number=number))
@@ -144,14 +141,26 @@ if __name__ == '__main__':
     url_queue = queue.Queue()
     number = 0
     page_url_list = []
+    title = ['标签', '书名', '作者', '评分', '评价人数']
+    file_pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book_pro.xlsx'
 
     print("豆瓣爬虫爬取开始...")
     start = datetime.datetime.now()
+    if not os.path.exists(file_pata):
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet["A1"].value = title[0]
+        sheet["B1"].value = title[1]
+        sheet["C1"].value = title[2]
+        sheet["D1"].value = title[3]
+        sheet["E1"].value = title[4]
+        workbook.save(file_pata)
+
     # 获取所有tag的链接
     # initial_url = 'https://book.douban.com/tag/?view=type'
     # getTagUrl(initial_url)
 
-    test = '/tag/小说'
+    test = '/tag/小说?start=1000&type=T'
     # getHTMLUrl(test, page_url_list)
     # a = page_url_list[-1]
     # page_url_list.pop()
