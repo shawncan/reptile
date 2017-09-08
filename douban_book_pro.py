@@ -52,7 +52,7 @@ def getHTMLUrl(url, url_list):
     """
     提取所有需要爬取信息的网页链接
     """
-    page_num = 0
+    number = 0
     tag_url = 'https://book.douban.com' + url
     url_list.append(url)
 
@@ -60,12 +60,15 @@ def getHTMLUrl(url, url_list):
     soup = BeautifulSoup(html, 'html.parser')
     try:
         paginator = soup.find(attrs={'class': 'paginator'})
-        page = paginator.find_all('a')
-
+        page = paginator.find_all('a')[1:-1]
+        thispage = paginator.find_all(attrs={'class': 'thispage'})[0].text
         for url in range(len(page)):
-            if page_num == 5:
+            page_num = page[url].text
+            if int(page_num) < int(thispage):
+                continue
+            if number == 4:
                 break
-            page_num += 1
+            number += 1
             page_url = page[url].attrs['href']
             url_list.append(page_url)
     except Exception:
@@ -79,6 +82,7 @@ def getContentExtraction(url):
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book_pro.xlsx'
     page_url = 'https://book.douban.com' + url
     book_list = []
+    status = True
     html = getHTMLText(page_url)
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -90,8 +94,13 @@ def getContentExtraction(url):
         rating_nums = subject_list.find_all(attrs={'class': 'rating_nums'})
         pl = subject_list.find_all(attrs={'class': 'pl'})
 
+        pl2 = soup.find_all(attrs={'class': 'pl2'})[0].text
+
+        if pl2 == '没有找到符合条件的图书':
+            status = False
+
         for i in range(len(h2)):
-            book_data = {'标签': '', '书名': '', '作者': '', '评分': '', '评价人数': '', }
+            book_data = {'标签': '', '书名': '', '作者': '', '评分': '', '评价人数': '', '书本链接': '', }
 
             score = rating_nums[i].text
             comment = re.findall(r'\d*人评价', str(pl[i]))[0][:-3]
@@ -104,30 +113,34 @@ def getContentExtraction(url):
             book_name = h2[i].a.attrs['title']
             author = pub[i].text.split("  ")[6].split("/")[0]
             number_of_comments = re.findall(r'\d*人评价', str(pl[i]))[0]
+            book_url = h2[i].a.attrs['href']
 
             book_data['标签'] = content
             book_data['书名'] = book_name
             book_data['作者'] = author
             book_data['评分'] = score
             book_data['评价人数'] = number_of_comments
+            book_data['书本链接'] = book_url
 
             book_list.append(book_data)
 
         # mutex.acquire()
         page_workbook = openpyxl.load_workbook(pata)
         page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
-        row = sheet.max_row
+        row = page_sheet.max_row
         for i in range(len(book_list)):
             page_sheet["A%d" % (row + i + 1)].value = book_list[i]['标签']
             page_sheet["B%d" % (row + i + 1)].value = book_list[i]['书名']
             page_sheet["C%d" % (row + i + 1)].value = book_list[i]['作者']
             page_sheet["D%d" % (row + i + 1)].value = book_list[i]['评分']
             page_sheet["E%d" % (row + i + 1)].value = book_list[i]['评价人数']
+            page_sheet["F%d" % (row + i + 1)].value = book_list[i]['书本链接']
         page_workbook.save(pata)
         print("\r{url}数据爬取完成...".format(url=page_url, end=""))
         # mutex.release()
+        return status
     except Exception:
-        logger.exception("Extract page {number} message failed".format(number=number))
+        logger.exception("Failed to extract {link} information".format(link=page_url))
 
 
 if __name__ == '__main__':
@@ -137,12 +150,13 @@ if __name__ == '__main__':
                         filename='/Users/wangjiacan/Desktop/代码/log/DBTS_pro.txt',
                         filemode='a')
 
+    file_pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book_pro.xlsx'
+    title = ['标签', '书名', '作者', '评分', '评价人数', '书本链接']
     logger = logging.getLogger()
     url_queue = queue.Queue()
-    number = 0
     page_url_list = []
-    title = ['标签', '书名', '作者', '评分', '评价人数']
-    file_pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/duoban_book_pro.xlsx'
+    threads = []
+    enable = True
 
     print("豆瓣爬虫爬取开始...")
     start = datetime.datetime.now()
@@ -154,20 +168,32 @@ if __name__ == '__main__':
         sheet["C1"].value = title[2]
         sheet["D1"].value = title[3]
         sheet["E1"].value = title[4]
+        sheet["F1"].value = title[5]
         workbook.save(file_pata)
 
     # 获取所有tag的链接
     # initial_url = 'https://book.douban.com/tag/?view=type'
     # getTagUrl(initial_url)
 
-    test = '/tag/小说?start=1000&type=T'
-    # getHTMLUrl(test, page_url_list)
-    # a = page_url_list[-1]
-    # page_url_list.pop()
-    # page_url_list.clear()
+    wait_url = '/tag/小说'
 
-    getContentExtraction(test)
     # mutex = threading.Lock()
+    while enable:
+        getHTMLUrl(wait_url, page_url_list)
+        wait_url = page_url_list[-1]
+        page_url_list.pop()
+        for i in page_url_list:
+            if not enable:
+                break
+            enable = getContentExtraction(i)
+        page_url_list.clear()
+
+    # for t in test_list:
+    #     threads.append(threading.Thread(target=getContentExtraction, args=(t, )))
+    # for t in threads:
+    #     t.start()
+    # for t in threads:
+    #     t.join()
     # for i in range(url_queue.qsize()):
     #     number += 1
     #     t = threading.Thread(target=getContentExtraction, args=(url_queue.get(),))
