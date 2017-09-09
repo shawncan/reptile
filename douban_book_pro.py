@@ -17,8 +17,13 @@ def getHTMLText(url):
     """
     下载目标网页源码
     """
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
+    }
+
+    proxies = {"https": "http://125.118.28.246:8118", }
     try:
-        r = requests.get(url)
+        r = requests.get(url, headers=headers, proxies=proxies)
         r.raise_for_status()
         r.encoding = 'utf-8'
         return r.text
@@ -91,7 +96,7 @@ def getContentExtraction(url):
         content = soup.find_all(attrs={'id': 'content'})[0].h1.text.split(" ")[1]
         h2 = subject_list.find_all('h2')
         pub = subject_list.find_all(attrs={'class': 'pub'})
-        rating_nums = subject_list.find_all(attrs={'class': 'rating_nums'})
+        star_clearfix = subject_list.find_all(attrs={'class': 'star clearfix'})
         pl = subject_list.find_all(attrs={'class': 'pl'})
 
         pl2 = soup.find_all(attrs={'class': 'pl2'})[0].text
@@ -102,12 +107,16 @@ def getContentExtraction(url):
         for i in range(len(h2)):
             book_data = {'标签': '', '书名': '', '作者': '', '评分': '', '评价人数': '', '书本链接': '', }
 
-            score = rating_nums[i].text
             comment = re.findall(r'\d*人评价', str(pl[i]))[0][:-3]
-
             if int(comment) < 20000:
                 continue
-            if float(score) < 8.6:
+
+            rating_nums = re.findall(r'\d.\d<', str(star_clearfix[i]))
+            if rating_nums:
+                score = rating_nums[0][:-1]
+            else:
+                continue
+            if float(score) < 8.5:
                 continue
 
             book_name = h2[i].a.attrs['title']
@@ -143,6 +152,27 @@ def getContentExtraction(url):
         logger.exception("Failed to extract {link} information".format(link=page_url))
 
 
+def Start(url):
+    page_url_list = []
+    enable = True
+    wait_url = url
+    a = 0
+
+    while enable:
+        getHTMLUrl(wait_url, page_url_list)
+        wait_url = page_url_list[-1]
+        page_url_list.pop()
+        for p_url in page_url_list:
+            if not enable:
+                break
+            enable = getContentExtraction(p_url)
+            time.sleep(2)
+            a += 1
+        page_url_list.clear()
+        time.sleep(5)
+    print(a)
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -154,9 +184,7 @@ if __name__ == '__main__':
     title = ['标签', '书名', '作者', '评分', '评价人数', '书本链接']
     logger = logging.getLogger()
     url_queue = queue.Queue()
-    page_url_list = []
     threads = []
-    enable = True
 
     print("豆瓣爬虫爬取开始...")
     start = datetime.datetime.now()
@@ -171,34 +199,19 @@ if __name__ == '__main__':
         sheet["F1"].value = title[5]
         workbook.save(file_pata)
 
-    # 获取所有tag的链接
-    # initial_url = 'https://book.douban.com/tag/?view=type'
-    # getTagUrl(initial_url)
+    initial_url = 'https://book.douban.com/tag/?view=type'
+    getTagUrl(initial_url)
 
-    wait_url = '/tag/小说'
+    for t in range(url_queue.qsize()):
+        Start(url_queue.get())
 
     # mutex = threading.Lock()
-    while enable:
-        getHTMLUrl(wait_url, page_url_list)
-        wait_url = page_url_list[-1]
-        page_url_list.pop()
-        for i in page_url_list:
-            if not enable:
-                break
-            enable = getContentExtraction(i)
-        page_url_list.clear()
-
-    # for t in test_list:
-    #     threads.append(threading.Thread(target=getContentExtraction, args=(t, )))
+    # for t in range(url_queue.qsize()):
+    #     threads.append(threading.Thread(target=Start, args=(url_queue.get(), )))
     # for t in threads:
     #     t.start()
     # for t in threads:
     #     t.join()
-    # for i in range(url_queue.qsize()):
-    #     number += 1
-    #     t = threading.Thread(target=getContentExtraction, args=(url_queue.get(),))
-    #     t.start()
-    #     print("\r第{number}页数据开始爬取".format(number=number, end=""))
 
     end = datetime.datetime.now()
     print("豆瓣爬虫爬取结束...")
