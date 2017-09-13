@@ -13,7 +13,21 @@ import time
 import os
 
 
-def getHTMLText(url):
+def getProxy():
+    """
+    下载代理的ip
+    """
+    try:
+        api_url = 'http://proxy.mimvp.com/api/fetch.php?orderid=860170913191809460&num=100&http_type=1,2&ping_time=0.3&result_fields=1,2&result_format=json'
+        result = requests.get(api_url)
+        proxy_json = result.json()
+        proxy = proxy_json['result']
+        return proxy
+    except Exception:
+        logger.exception("Download Proxy Text failed")
+
+
+def getHTMLText(url, py_list):
     """
     下载目标网页源码
     """
@@ -21,22 +35,40 @@ def getHTMLText(url):
         'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
     }
 
-    proxies = {"https": "http://125.118.28.246:8118", }
+    result = ''
     try:
-        r = requests.get(url, headers=headers, proxies=proxies)
-        r.raise_for_status()
-        r.encoding = 'utf-8'
-        return r.text
+
+        for proxy_ip in py_list:
+            ip = proxy_ip['ip:port']
+            http_type = proxy_ip['http_type']
+            if http_type == 'HTTP/HTTPS':
+                http = http_type[0:4]
+            else:
+                http = http_type
+            proxies = {http: ip}
+
+            r = requests.get(url, headers=headers, proxies=proxies)
+            r.raise_for_status()
+            r.encoding = 'utf-8'
+            status = r.status_code
+            result = r.text
+
+            if int(status) == 404:
+                continue
+            elif int(status) == 200:
+                break
+
+        return result
     except Exception:
         logger.exception("Download HTML Text failed")
 
 
-def getTagUrl(url):
+def getTagUrl(url, py_list):
     """
     提取所有需要爬取信息的网页链接
     """
     tag_list = []
-    html = getHTMLText(url)
+    html = getHTMLText(url, py_list)
     soup = BeautifulSoup(html, 'html.parser')
     try:
         article = soup.find(attrs={'class': 'article'})
@@ -53,7 +85,7 @@ def getTagUrl(url):
         logger.exception("Site link extraction failed")
 
 
-def getHTMLUrl(url, url_list):
+def getHTMLUrl(url, url_list, py_list):
     """
     提取所有需要爬取信息的网页链接
     """
@@ -61,7 +93,7 @@ def getHTMLUrl(url, url_list):
     tag_url = 'https://book.douban.com' + url
     url_list.append(url)
 
-    html = getHTMLText(tag_url)
+    html = getHTMLText(tag_url, py_list)
     soup = BeautifulSoup(html, 'html.parser')
     try:
         paginator = soup.find(attrs={'class': 'paginator'})
@@ -80,7 +112,7 @@ def getHTMLUrl(url, url_list):
         logger.exception("Site link extraction failed")
 
 
-def getContentExtraction(url):
+def getContentExtraction(url, py_list):
     """
     提取目标网页中的书名、作者、评分、评价人数、评语的信息并保存到Excel
     """
@@ -88,7 +120,7 @@ def getContentExtraction(url):
     page_url = 'https://book.douban.com' + url
     book_list = []
     status = True
-    html = getHTMLText(page_url)
+    html = getHTMLText(page_url, py_list)
     soup = BeautifulSoup(html, 'html.parser')
 
     try:
@@ -152,25 +184,27 @@ def getContentExtraction(url):
         logger.exception("Failed to extract {link} information".format(link=page_url))
 
 
-def Start(url):
+def Start(url, py_list):
     page_url_list = []
     enable = True
     wait_url = url
     a = 0
 
-    while enable:
-        getHTMLUrl(wait_url, page_url_list)
-        wait_url = page_url_list[-1]
-        page_url_list.pop()
-        for p_url in page_url_list:
-            if not enable:
-                break
-            enable = getContentExtraction(p_url)
-            time.sleep(2)
-            a += 1
-        page_url_list.clear()
-        time.sleep(5)
-    print(a)
+    try:
+        while enable:
+            getHTMLUrl(wait_url, page_url_list, py_list)
+            wait_url = page_url_list[-1]
+            page_url_list.pop()
+            for p_url in page_url_list:
+                if not enable:
+                    break
+                enable = getContentExtraction(p_url, py_list)
+                time.sleep(2)
+                a += 1
+            page_url_list.clear()
+        print(a)
+    except Exception:
+        logger.exception("Running encountered an error")
 
 
 if __name__ == '__main__':
@@ -187,6 +221,7 @@ if __name__ == '__main__':
     threads = []
 
     print("豆瓣爬虫爬取开始...")
+    proxy_list = getProxy()
     start = datetime.datetime.now()
     if not os.path.exists(file_pata):
         workbook = openpyxl.Workbook()
@@ -200,10 +235,10 @@ if __name__ == '__main__':
         workbook.save(file_pata)
 
     initial_url = 'https://book.douban.com/tag/?view=type'
-    getTagUrl(initial_url)
+    getTagUrl(initial_url, proxy_list)
 
     for t in range(url_queue.qsize()):
-        Start(url_queue.get())
+        Start(url_queue.get(), proxy_list)
 
     # mutex = threading.Lock()
     # for t in range(url_queue.qsize()):
