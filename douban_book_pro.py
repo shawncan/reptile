@@ -13,40 +13,70 @@ import time
 import os
 
 
+def deleteProxy():
+    """
+    删除失效代理
+    """
+    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/ip.txt'
+
+    file_read = open(path, 'r')
+    file_content = ''.join(file_read.readlines()[1:])
+    file_write = open(path, 'w')
+    file_write.write(file_content)
+    file_read.close()
+    file_write.close()
+
+
 def getHTMLText(url):
     """
     下载目标网页源码
     """
+    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/ip.txt'
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
     }
 
-    result = ''
-    try:
+    error_num = 0
+    file = open(path, 'r')
+    file_num = len(file.readlines())
+    file.close()
+    html = ''
+    for i in range(file_num):
+        ip_file = open(path, 'r')
+        proxy_ip = ip_file.readlines()[0][:-1]
+        ip_file.close()
+        print(proxy_ip)
 
-        for proxy_ip in py_list:
-            ip = proxy_ip['ip:port']
-            http_type = proxy_ip['http_type']
-            if http_type == 'HTTP/HTTPS':
-                http = http_type[0:4]
-            else:
-                http = http_type
-            proxies = {http: ip}
+        proxies = {
+            "http": "http://" + proxy_ip,
+            "https": "http://" + proxy_ip
+        }
 
-            r = requests.get(url, headers=headers, proxies=proxies)
-            r.raise_for_status()
-            r.encoding = 'utf-8'
+        try:
+            r = requests.get(url, headers=headers, proxies=proxies, timeout=20)
             status = r.status_code
-            result = r.text
-
-            if int(status) == 404:
+            print(status)
+            if int(status) == 403:
+                deleteProxy()
                 continue
-            elif int(status) == 200:
+            else:
+                r.raise_for_status()
+                r.encoding = 'utf-8'
+                html = r.text
+                soup = BeautifulSoup(html, 'html.parser')
+                script = soup.find_all("script", attrs={'type': 'text/javascript'})
+                if not script:
+                    deleteProxy()
+                    continue
                 break
-
-        return result
-    except Exception:
-        logger.exception("Download HTML Text failed")
+        except Exception:
+            error_num += 1
+            print(error_num)
+            if error_num == 3:
+                deleteProxy()
+                error_num = 0
+            continue
+    return html
 
 
 def getTagUrl(url):
