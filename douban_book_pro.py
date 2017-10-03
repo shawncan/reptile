@@ -257,10 +257,9 @@ if __name__ == '__main__':
         sheet["F1"].value = title[5]
         workbook.save(file_pata)
 
+    mutex = threading.Lock()
     initial_url = 'https://book.douban.com/tag/?view=type'
     getTagUrl(initial_url)
-
-    mutex = threading.Lock()
 
     while url_queue.qsize() != 0:
         if url_queue.qsize() < 6:
