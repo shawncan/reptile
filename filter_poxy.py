@@ -55,8 +55,9 @@ def verification():
 if __name__ == '__main__':
     url_queue = queue.Queue()
     print("代理ip提取开始...")
-    name_list = ["ip_20170923"]
-    getProxy(name_list[0])
+    name_list = ['请填写需要检测的代理ip文件名']
+    for i in range(len(name_list)):
+        getProxy(name_list[i])
     print("代理ip文件读取完成，开始检测ip可用性")
     verification()
     print("代理ip提取结束...")
