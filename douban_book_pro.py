@@ -31,12 +31,13 @@ def getHTMLText(url):
     """
     下载目标网页源码
     """
-    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/ip.txt'
+    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/proxy_ip.txt'
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
     }
 
     error_num = 0
+    mutex.acquire()
     file = open(path, 'r')
     file_num = len(file.readlines())
     file.close()
@@ -45,7 +46,6 @@ def getHTMLText(url):
         ip_file = open(path, 'r')
         proxy_ip = ip_file.readlines()[0][:-1]
         ip_file.close()
-        print(proxy_ip)
 
         proxies = {
             "http": "http://" + proxy_ip,
@@ -55,7 +55,7 @@ def getHTMLText(url):
         try:
             r = requests.get(url, headers=headers, proxies=proxies, timeout=20)
             status = r.status_code
-            print(status)
+            print('代理：{ip}  网址：{url}  状态：{url_status}'.format(ip=proxy_ip, url=url, url_status=status))
             if int(status) == 403:
                 deleteProxy()
                 continue
@@ -71,11 +71,12 @@ def getHTMLText(url):
                 break
         except Exception:
             error_num += 1
-            print(error_num)
+            print('网页链接请求失败：第{error_num}次'.format(error_num=error_num))
             if error_num == 3:
                 deleteProxy()
                 error_num = 0
             continue
+    mutex.release()
     return html
 
 
@@ -146,8 +147,12 @@ def getContentExtraction(url):
         pub = subject_list.find_all(attrs={'class': 'pub'})
         star_clearfix = subject_list.find_all(attrs={'class': 'star clearfix'})
         pl = subject_list.find_all(attrs={'class': 'pl'})
-
+        
+        rel = soup.find_all(attrs={'rel': 'next'})
         pl2 = soup.find_all(attrs={'class': 'pl2'})[0].text
+
+        if not rel:
+            status = False
 
         if pl2 == '没有找到符合条件的图书':
             status = False
@@ -181,7 +186,7 @@ def getContentExtraction(url):
 
             book_list.append(book_data)
 
-        # mutex.acquire()
+        mutex.acquire()
         page_workbook = openpyxl.load_workbook(pata)
         page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
         row = page_sheet.max_row
@@ -194,7 +199,7 @@ def getContentExtraction(url):
             page_sheet["F%d" % (row + i + 1)].value = book_list[i]['书本链接']
         page_workbook.save(pata)
         print("\r{url}数据爬取完成...".format(url=page_url, end=""))
-        # mutex.release()
+        mutex.release()
         return status
     except Exception:
         logger.exception("Failed to extract {link} information".format(link=page_url))
@@ -204,7 +209,8 @@ def Start(url):
     page_url_list = []
     enable = True
     wait_url = url
-    a = 0
+    tag_name = url[5:]
+    page_num = 0
 
     try:
         while enable:
@@ -217,9 +223,9 @@ def Start(url):
                     break
                 enable = getContentExtraction(p_url)
                 time.sleep(2)
-                a += 1
+                page_num += 1
             page_url_list.clear()
-        print(a)
+        print("豆瓣图书标签:{tag}爬取完成，共爬取{num}个页面...".format(tag=tag_name, num=page_num))
     except Exception:
         logger.exception("Running encountered an error")
 
@@ -236,6 +242,7 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     url_queue = queue.Queue()
     threads = []
+    threads_url = []
 
     print("豆瓣爬虫爬取开始...")
     start = datetime.datetime.now()
@@ -253,16 +260,25 @@ if __name__ == '__main__':
     initial_url = 'https://book.douban.com/tag/?view=type'
     getTagUrl(initial_url)
 
-    for t in range(url_queue.qsize()):
-        Start(url_queue.get())
+    mutex = threading.Lock()
 
-    # mutex = threading.Lock()
-    # for t in range(url_queue.qsize()):
-    #     threads.append(threading.Thread(target=Start, args=(url_queue.get(), )))
-    # for t in threads:
-    #     t.start()
-    # for t in threads:
-    #     t.join()
+    while url_queue.qsize() != 0:
+        if url_queue.qsize() < 6:
+            num = url_queue.qsize()
+        else:
+            num = 6
+        for i in range(num):
+            threads_url.append(url_queue.get())
+
+        for t in range(len(threads_url)):
+            print("豆瓣图书标签:{tag}开始爬取...".format(tag=threads_url[t][5:]))
+            threads.append(threading.Thread(target=Start, args=(threads_url[t], )))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        threads.clear()
+        threads_url.clear()
 
     end = datetime.datetime.now()
     print("豆瓣爬虫爬取结束...")
