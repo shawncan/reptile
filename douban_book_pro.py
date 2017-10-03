@@ -17,7 +17,7 @@ def deleteProxy():
     """
     删除失效代理
     """
-    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/ip.txt'
+    path = '/Users/wangjiacan/Desktop/shawn/爬取资料/ip/proxy_ip.txt'
 
     file_read = open(path, 'r')
     file_content = ''.join(file_read.readlines()[1:])
