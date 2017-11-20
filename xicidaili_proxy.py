@@ -28,78 +28,85 @@ def getHTMLText(url):
         logger.exception("Download HTML Text failed")
 
 
-def extractIp(limit_list):
+def extractIp(limit_list, url):
+    """
+    提取此区间内的代理信息并保存到Excel
+    """
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/xicidaili_proxy.xlsx'
+    status = True
     proxy_list = []
-    xicidaili_url = "http://www.xicidaili.com/nn/"
-    html = getHTMLText(xicidaili_url)
+    html = getHTMLText(url)
     soup = BeautifulSoup(html, 'html.parser')
     tbody = soup.find('table')
     tr = tbody.find_all('tr')
     crawl_capped = limit_list[1]
     crawl_lower_limit = limit_list[0]
-    print(crawl_capped)
-    print(crawl_lower_limit)
 
-    extrac_info = re.findall(r'<td>.*</td>', str(tr[8]))
-    verification_time = extrac_info[4][4:-5]
-    print(verification_time.split(" ")[1].split(":")[0])
+    for info_fast in tr[1:]:
+        proxy_data = {'ip': '', '端口': '', '类型': '', '存活时间': '', '验证时间': '', }
 
-    # for info_fast in tr[1:]:
-    #     proxy_data = {'ip': '', '端口': '', '类型': '', '存活时间': '', '验证时间': '', }
-    #
-    #     judgment_info = re.findall(r'<div class="bar" .*>', str(info_fast))
-    #     # 速度
-    #     speed = judgment_info[0].split('"')[3][:-1]
-    #     # 连接时间
-    #     connect_time = judgment_info[1].split('"')[3][:-1]
-    #
-    #     if float(speed) > 3:
-    #         continue
-    #     if float(connect_time) > 1:
-    #         continue
-    #
-    #     extrac_info = re.findall(r'<td>.*</td>', str(info_fast))
-    #
-    #     # 存活时间
-    #     survival_time = extrac_info[3][4:-5]
-    #     # 时间属性
-    #     time_attribute = re.findall(r'([\u4e00-\u9fa5]+)', survival_time)
-    #
-    #     if time_attribute[0] != "天":
-    #         continue
-    #
-    #     # 存活时间数字
-    #     num_time = survival_time[:-1]
-    #
-    #     # ip地址
-    #     ip = extrac_info[0][4:-5]
-    #     # 端口
-    #     port = extrac_info[1][4:-5]
-    #     # 类型
-    #     type = extrac_info[2][4:-5]
-    #     # 验证时间
-    #     verification_time = extrac_info[4][4:-5]
-    #
-    #     proxy_data['ip'] = ip
-    #     proxy_data['端口'] = port
-    #     proxy_data['类型'] = type
-    #     proxy_data['存活时间'] = num_time
-    #     proxy_data['验证时间'] = verification_time
-    #
-    #     proxy_list.append(proxy_data)
-    # print(len(proxy_list))
-    # page_workbook = openpyxl.load_workbook(pata)
-    # page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
-    # row = page_sheet.max_row
-    # for i in range(len(proxy_list)):
-    #     page_sheet["A%d" % (row + i + 1)].value = proxy_list[i]['ip']
-    #     page_sheet["B%d" % (row + i + 1)].value = proxy_list[i]['端口']
-    #     page_sheet["C%d" % (row + i + 1)].value = proxy_list[i]['类型']
-    #     page_sheet["D%d" % (row + i + 1)].value = proxy_list[i]['存活时间']
-    #     page_sheet["E%d" % (row + i + 1)].value = proxy_list[i]['验证时间']
-    # page_workbook.save(pata)
-    # print("爬取完成")
+        extrac_info = re.findall(r'<td>.*</td>', str(info_fast))
+
+        # 验证时间
+        verification_time = extrac_info[4][4:-5]
+        # 验证的小时
+        hour = verification_time.split(" ")[1].split(":")[0]
+
+        if int(hour) >= int(crawl_capped):
+            continue
+
+        if int(crawl_lower_limit) > int(hour):
+            status = False
+            continue
+
+        judgment_info = re.findall(r'<div class="bar" .*>', str(info_fast))
+        # 速度
+        speed = judgment_info[0].split('"')[3][:-1]
+        # 连接时间
+        connect_time = judgment_info[1].split('"')[3][:-1]
+
+        if float(speed) > 3:
+            continue
+        if float(connect_time) > 1:
+            continue
+
+        # 存活时间
+        survival_time = extrac_info[3][4:-5]
+        # 存活时间数字
+        num_time = survival_time[:-1]
+        # 时间属性
+        time_attribute = re.findall(r'([\u4e00-\u9fa5]+)', survival_time)
+
+        if time_attribute[0] != "天":
+            continue
+
+        # ip地址
+        ip = extrac_info[0][4:-5]
+        # 端口
+        port = extrac_info[1][4:-5]
+        # 类型
+        type = extrac_info[2][4:-5]
+
+        proxy_data['ip'] = ip
+        proxy_data['端口'] = port
+        proxy_data['类型'] = type
+        proxy_data['存活时间'] = num_time
+        proxy_data['验证时间'] = verification_time
+
+        proxy_list.append(proxy_data)
+
+    page_workbook = openpyxl.load_workbook(pata)
+    page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
+    row = page_sheet.max_row
+    for i in range(len(proxy_list)):
+        page_sheet["A%d" % (row + i + 1)].value = proxy_list[i]['ip']
+        page_sheet["B%d" % (row + i + 1)].value = proxy_list[i]['端口']
+        page_sheet["C%d" % (row + i + 1)].value = proxy_list[i]['类型']
+        page_sheet["D%d" % (row + i + 1)].value = proxy_list[i]['存活时间']
+        page_sheet["E%d" % (row + i + 1)].value = proxy_list[i]['验证时间']
+    page_workbook.save(pata)
+    print("爬取完成")
+    return status
 
 
 if __name__ == '__main__':
@@ -114,6 +121,7 @@ if __name__ == '__main__':
     title = ['ip', '端口', '类型', '存活时间', '验证时间', ]
     crawl_time = [["0", "10"], ["10", "17"], ["17", "23"]]
     crawl_time_num = 0
+    enable = True
 
     if not os.path.exists(file_pata):
         workbook = openpyxl.Workbook()
@@ -133,5 +141,11 @@ if __name__ == '__main__':
     elif 17 < int(current_time) <= 23:
         crawl_time_num = 1
 
-    extractIp(crawl_time[crawl_time_num])
+    label_num = 0
+    while enable:
+        label_num += 1
+        xicidaili_url = "http://www.xicidaili.com/nn/" + str(label_num)
+        print(xicidaili_url)
+        enable = extractIp(crawl_time[crawl_time_num], xicidaili_url)
+
 
