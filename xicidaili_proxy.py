@@ -7,7 +7,7 @@ import logging
 from bs4 import BeautifulSoup
 import openpyxl
 import os
-import time
+import datetime
 
 
 def getHTMLText(url):
@@ -42,6 +42,15 @@ def extractIp(limit_list, url):
     crawl_capped = limit_list[1]
     crawl_lower_limit = limit_list[0]
 
+    today = datetime.date.today()
+
+    if int(crawl_capped) == 23:
+        yesterday = today - datetime.timedelta(days=1)
+        current_date = yesterday.strftime("%d")
+    else:
+        current_date = today.strftime("%d")
+
+    print(current_date)
     for info_fast in tr[1:]:
         proxy_data = {'ip': '', '端口': '', '类型': '', '存活时间': '', '验证时间': '', }
 
@@ -51,8 +60,18 @@ def extractIp(limit_list, url):
         verification_time = extrac_info[4][4:-5]
         # 验证的小时
         hour = verification_time.split(" ")[1].split(":")[0]
+        # 验证的日期
+        day = verification_time.split(" ")[0].split("-")[2]
+
+        if int(day) != int(current_date):
+            # status = False
+            if int(crawl_capped) != 23:
+                status = False
+            continue
 
         if int(hour) >= int(crawl_capped):
+            if int(day) != int(current_date):
+                print("！")
             continue
 
         if int(crawl_lower_limit) > int(hour):
@@ -105,7 +124,7 @@ def extractIp(limit_list, url):
         page_sheet["D%d" % (row + i + 1)].value = proxy_list[i]['存活时间']
         page_sheet["E%d" % (row + i + 1)].value = proxy_list[i]['验证时间']
     page_workbook.save(pata)
-    print("爬取完成")
+    print("\r{url}Crawling OK...".format(url=url, end=""))
     return status
 
 
@@ -133,7 +152,8 @@ if __name__ == '__main__':
         sheet["E1"].value = title[4]
         workbook.save(file_pata)
 
-    current_time = time.strftime("%H", time.localtime())
+    now_time = datetime.datetime.now()
+    current_time = now_time.strftime("%H")
     if 0 < int(current_time) < 10:
         crawl_time_num = 2
     elif 10 < int(current_time) < 17:
@@ -145,7 +165,6 @@ if __name__ == '__main__':
     while enable:
         label_num += 1
         xicidaili_url = "http://www.xicidaili.com/nn/" + str(label_num)
-        print(xicidaili_url)
         enable = extractIp(crawl_time[crawl_time_num], xicidaili_url)
 
 
