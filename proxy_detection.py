@@ -75,7 +75,7 @@ def ipExtract():
         new_sheet["E%d" % (i + 1)].value = available[i]['验证时间']
 
     page_workbook.save(pata)
-    print("ip提取成功：{}条有效数据，{}条失效数据".format(success_count, failure_count))
+    print("ip extracted successfully：{}valid data，{}failure data".format(success_count, failure_count))
 
 
 if __name__ == '__main__':
