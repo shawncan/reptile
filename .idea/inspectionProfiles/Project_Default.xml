@@ -15,6 +15,7 @@
           <option value="N801" />
           <option value="N802" />
           <option value="N806" />
+          <option value="N803" />
         </list>
       </option>
     </inspection_tool>
@@ -26,5 +27,6 @@
         </list>
       </option>
     </inspection_tool>
+    <inspection_tool class="PyTypeCheckerInspection" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>
