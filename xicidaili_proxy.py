@@ -28,11 +28,35 @@ def getHTMLText(url):
         logger.exception("Download HTML Text failed")
 
 
+def writeExcel(poxy_list):
+    """
+    把提取出来的信息写入excel
+    """
+    pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/agentPool.xlsx'
+    title = ['ip', '类型', '验证时间',]
+
+    if not os.path.exists(pata):
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet["A1"].value = title[0]
+        sheet["B1"].value = title[1]
+        sheet["C1"].value = title[2]
+        workbook.save(pata)
+
+    page_workbook = openpyxl.load_workbook(pata)
+    page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
+    row = page_sheet.max_row
+    for i in range(len(poxy_list)):
+        page_sheet["A%d" % (row + i + 1)].value = poxy_list[i]['ip']
+        page_sheet["B%d" % (row + i + 1)].value = poxy_list[i]['类型']
+        page_sheet["C%d" % (row + i + 1)].value = poxy_list[i]['验证时间']
+    page_workbook.save(pata)
+
+
 def extractIp(limit_list, url):
     """
     提取此区间内的代理信息并保存到Excel
     """
-    pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/xicidaili_proxy.xlsx'
     status = True
     proxy_list = []
     html = getHTMLText(url)
@@ -52,7 +76,7 @@ def extractIp(limit_list, url):
 
     print(current_date)
     for info_fast in tr[1:]:
-        proxy_data = {'ip': '', '端口': '', '类型': '', '存活时间': '', '验证时间': '', }
+        proxy_data = {'ip': '', '类型': '', '存活时间': '', '验证时间': '', }
 
         extrac_info = re.findall(r'<td>.*</td>', str(info_fast))
 
@@ -91,8 +115,6 @@ def extractIp(limit_list, url):
 
         # 存活时间
         survival_time = extrac_info[3][4:-5]
-        # 存活时间数字
-        num_time = survival_time[:-1]
         # 时间属性
         time_attribute = re.findall(r'([\u4e00-\u9fa5]+)', survival_time)
 
@@ -103,27 +125,18 @@ def extractIp(limit_list, url):
         ip = extrac_info[0][4:-5]
         # 端口
         port = extrac_info[1][4:-5]
+        # 代理ip
+        poxyIp = ("{ip}:{port}").format(ip=ip, port=port)
         # 类型
         type = extrac_info[2][4:-5]
 
-        proxy_data['ip'] = ip
-        proxy_data['端口'] = port
+        proxy_data['ip'] = poxyIp
         proxy_data['类型'] = type
-        proxy_data['存活时间'] = num_time
         proxy_data['验证时间'] = verification_time
 
         proxy_list.append(proxy_data)
 
-    page_workbook = openpyxl.load_workbook(pata)
-    page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
-    row = page_sheet.max_row
-    for i in range(len(proxy_list)):
-        page_sheet["A%d" % (row + i + 1)].value = proxy_list[i]['ip']
-        page_sheet["B%d" % (row + i + 1)].value = proxy_list[i]['端口']
-        page_sheet["C%d" % (row + i + 1)].value = proxy_list[i]['类型']
-        page_sheet["D%d" % (row + i + 1)].value = proxy_list[i]['存活时间']
-        page_sheet["E%d" % (row + i + 1)].value = proxy_list[i]['验证时间']
-    page_workbook.save(pata)
+    writeExcel(proxy_list)
     print("\r{url}Crawling OK...".format(url=url, end=""))
     return status
 
@@ -136,21 +149,9 @@ if __name__ == '__main__':
                         filemode='a')
 
     logger = logging.getLogger()
-    file_pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/xicidaili_proxy.xlsx'
-    title = ['ip', '端口', '类型', '存活时间', '验证时间', ]
     crawl_time = [["0", "10"], ["10", "17"], ["17", "23"]]
     crawl_time_num = 0
     enable = True
-
-    if not os.path.exists(file_pata):
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet["A1"].value = title[0]
-        sheet["B1"].value = title[1]
-        sheet["C1"].value = title[2]
-        sheet["D1"].value = title[3]
-        sheet["E1"].value = title[4]
-        workbook.save(file_pata)
 
     now_time = datetime.datetime.now()
     current_time = now_time.strftime("%H")
