@@ -15,7 +15,7 @@ import json
 import demjson
 
 
-def getHTMLText(url):
+def getHTMLText(url, ip):
     """
     下载目标网页源码
     """
@@ -23,17 +23,17 @@ def getHTMLText(url):
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0',
     }
     proxies = {
-        "http": "http://202.93.230.41:1234",
-        "https": "http://202.93.230.41:1234",
+        "http": "http://" + ip,
+        "https": "http://" + ip,
     }
 
-    # try:
-    r = requests.get(url, headers=headers, proxies=proxies, timeout=20)
-    r.raise_for_status()
-    r.encoding = 'GBK'
-    return r.text
-    # except Exception:
-    #     logger.exception("Download HTML Text failed")
+    try:
+        r = requests.get(url, headers=headers, proxies=proxies, timeout=20)
+        r.raise_for_status()
+        r.encoding = 'GBK'
+        return r.text
+    except Exception:
+        logger.exception("Download HTML Text failed")
 
 
 def commentProcessing(contentInfo):
@@ -56,10 +56,48 @@ def commentProcessing(contentInfo):
     return contentInfo
 
 
+def readExcel(proxyInfo_list):
+    pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/agentPool.xlsx'
+    page_workbook = openpyxl.load_workbook(pata)
+    page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
+    for row in page_sheet.rows:
+        proxyData = {'ip': '', '类型': '', '验证时间': '', }
+        ip = row[0].value
+        httpType = row[1].value
+        checkDtime = row[2].value
+
+        proxyData["ip"] = ip
+        proxyData["类型"] = httpType
+        proxyData["验证时间"] = checkDtime
+
+        proxyInfo_list.append(proxyData)
+    page_workbook.save(pata)
+
+
+def writrProxyExcel(proxyInfo_list):
+    pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/agentPool.xlsx'
+    page_workbook = openpyxl.load_workbook(pata)
+
+    # 删除表
+    page_workbook.remove_sheet(page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0]))
+
+    # 新建表
+    new_sheet = page_workbook.create_sheet()
+
+    for i in range(len(proxyInfo_list)):
+        new_sheet["A%d" % (i + 1)].value = proxyInfo_list[i]['ip']
+        new_sheet["B%d" % (i + 1)].value = proxyInfo_list[i]['类型']
+        new_sheet["C%d" % (i + 1)].value = proxyInfo_list[i]['验证时间']
+
+    page_workbook.save(pata)
+
+
 def writeExcel(comment_list):
+    """
+    把提取出来的信息写入excel
+    """
     pata = '/Users/wangjiacan/Desktop/shawn/爬取资料/jdkk_comment.xlsx'
-    title = ['商品名称', '商品类型', '用户名', '会员等级', '第一次评价时间', '第一次评价内容', '第二次评价时间', '第二次评价内容',
-            '评价客户端']
+    title = ['商品类型', '用户名', '会员等级', '评价时间', '评价内容', '追评时间', '追评内容','评价客户端']
 
     if not os.path.exists(pata):
         workbook = openpyxl.Workbook()
@@ -72,54 +110,42 @@ def writeExcel(comment_list):
         sheet["F1"].value = title[5]
         sheet["G1"].value = title[6]
         sheet["H1"].value = title[7]
-        sheet["I1"].value = title[8]
         workbook.save(pata)
 
     page_workbook = openpyxl.load_workbook(pata)
     page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
     row = page_sheet.max_row
     for i in range(len(comment_list)):
-        page_sheet["A%d" % (row + i + 1)].value = comment_list[i]['商品名称']
-        page_sheet["B%d" % (row + i + 1)].value = comment_list[i]['商品类型']
-        page_sheet["C%d" % (row + i + 1)].value = comment_list[i]['用户名']
-        page_sheet["D%d" % (row + i + 1)].value = comment_list[i]['会员等级']
-        page_sheet["E%d" % (row + i + 1)].value = comment_list[i]['第一次评价时间']
-        page_sheet["F%d" % (row + i + 1)].value = comment_list[i]['第一次评价内容']
-        page_sheet["G%d" % (row + i + 1)].value = comment_list[i]['第二次评价时间']
-        page_sheet["H%d" % (row + i + 1)].value = comment_list[i]['第二次评价内容']
-        page_sheet["I%d" % (row + i + 1)].value = comment_list[i]['评价客户端']
-        # page_sheet["J%d" % (row + i + 1)].value = comment_list[i]['评价客户端']
+        page_sheet["A%d" % (row + i + 1)].value = comment_list[i]['商品类型']
+        page_sheet["B%d" % (row + i + 1)].value = comment_list[i]['用户名']
+        page_sheet["C%d" % (row + i + 1)].value = comment_list[i]['会员等级']
+        page_sheet["D%d" % (row + i + 1)].value = comment_list[i]['评价时间']
+        page_sheet["E%d" % (row + i + 1)].value = comment_list[i]['评价内容']
+        page_sheet["F%d" % (row + i + 1)].value = comment_list[i]['追评时间']
+        page_sheet["G%d" % (row + i + 1)].value = comment_list[i]['追评内容']
+        page_sheet["H%d" % (row + i + 1)].value = comment_list[i]['评价客户端']
     page_workbook.save(pata)
 
 
-def getContentExtraction():
-    page_url = 'https://sclub.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98vv445&productId=4183290&score=2&sortType=5&page=0&pageSize=10&isShadowSku=0&rid=0&fold=1'
-    html = getHTMLText(page_url)
-    a = html[25:-2]
-
-    # json_obj = demjson.encode(html)
-    return_josn = json.loads(a)
-    buyersomments = return_josn['comments']
+def getContentExtraction(buyersomments):
+    """
+    提取评论链接中的信息
+    """
     jdkkComment_list = []
 
     for num in range(len(buyersomments)):
-        kkComment_data = {'商品名称': '', '商品类型': '', '用户名': '', '会员等级': '', '第一次评价时间': '', '第一次评价内容': '',
-                          '第二次评价时间': '', '第二次评价内容': '', '评价图片': '', '评价客户端': '',}
+        kkComment_data = {'商品类型': '', '用户名': '', '会员等级': '', '评价时间': '', '评价内容': '','追评时间': '',
+                          '追评内容': '', '评价客户端': '',}
 
-        # 商品名称
-        referenceName = buyersomments[num]["referenceName"]
         # 商品类型
         productColor = buyersomments[num]["productColor"]
         # 用户名
         nickname = buyersomments[num]["nickname"]
         # 会员等级
         userLevelName = buyersomments[num]["userLevelName"]
-        print(nickname)
 
-        # 第一次评价信息
-        showOrderComment = buyersomments[num]["showOrderComment"]
         # 第一次评价时间
-        creationTime = showOrderComment["creationTime"]
+        creationTime = buyersomments[num]["creationTime"]
         # 第一次评价内容
         content = buyersomments[num]["content"]
         modify_content = commentProcessing(content)
@@ -135,26 +161,76 @@ def getContentExtraction():
             hAfterUserComment = afterUserComment["hAfterUserComment"]
             mostcontent = hAfterUserComment["content"]
             modify_mostcontent = commentProcessing(mostcontent)
-        else:
-            print("1")
 
         # 评价客户端
         userClientShow = buyersomments[num]['userClientShow']
 
-        kkComment_data['商品名称'] = referenceName
         kkComment_data['商品类型'] = productColor
         kkComment_data['用户名'] = nickname
         kkComment_data['会员等级'] = userLevelName
-        kkComment_data['第一次评价时间'] = creationTime
-        kkComment_data['第一次评价内容'] = modify_content
-        kkComment_data['第二次评价时间'] = created
-        kkComment_data['第二次评价内容'] = modify_mostcontent
+        kkComment_data['评价时间'] = creationTime
+        kkComment_data['评价内容'] = modify_content
+        kkComment_data['追评时间'] = created
+        kkComment_data['追评内容'] = modify_mostcontent
         kkComment_data['评价客户端'] = userClientShow
 
         jdkkComment_list.append(kkComment_data)
 
     writeExcel(jdkkComment_list)
-    print("爬取完成")
+
+
+def getEvaluationUrl():
+    productId = 4183290
+    # 2为中评，1为差评
+    score = 1
+    page = 0
+    enable = True
+    proxyInfo = []
+    deleteList = []
+    html = ''
+
+    readExcel(proxyInfo)
+    linkProxy = proxyInfo
+
+    while enable:
+        evaluationUrl = 'https://sclub.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98vv445&' \
+              'productId={productId}&score={score}&sortType=5&page={page}&pageSize=10&isShadowSku=0&rid=0&fold=1'.format\
+            (productId=productId, score=score, page=page)
+
+        for num in range(len(linkProxy)):
+            if num == 0:
+                continue
+
+            proxyIP = linkProxy[num]['ip']
+            html = getHTMLText(evaluationUrl, proxyIP)
+
+            if html == None:
+                deleteList.append(linkProxy[num])
+                linkProxy.remove(linkProxy[num])
+                continue
+            else:
+                break
+
+        htmlInfo = html[25:-2]
+        returnJosn = json.loads(htmlInfo)
+        buyersCommentsInfo = returnJosn['comments']
+        if buyersCommentsInfo:
+            getContentExtraction(buyersCommentsInfo)
+            print("第{page}页评论爬取完成".format(page=page))
+        else:
+            enable = False
+        page += 1
+
+    print(len(deleteList))
+    print(len(proxyInfo))
+
+    for proxy in deleteList:
+        proxyInfo.remove(proxy)
+
+    writrProxyExcel(proxyInfo)
+    print("评论完全爬取完成")
+
+
 
 
 
@@ -167,4 +243,4 @@ if __name__ == '__main__':
 
     logger = logging.getLogger()
 
-    getContentExtraction()
+    getEvaluationUrl()
