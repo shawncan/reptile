@@ -88,10 +88,7 @@ def getContentExtraction():
 
 
 if __name__ == '__main__':
-    # url_queue = queue.Queue()
-    # print("代理ip提取开始...")
-    # getProxy()
-    # print("代理ip下载完成，开始检测ip可用性")
-    # verification()
-    # print("代理ip提取结束...")
+    print("代理ip提取开始...")
     getContentExtraction()
+    print("代理ip提取结束...")
+
