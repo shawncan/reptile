@@ -186,27 +186,26 @@ def getEvaluationUrl():
     page = 0
     enable = True
     proxyInfo = []
-    deleteList = []
+    deleteList = 0
     html = ''
 
     readExcel(proxyInfo)
-    linkProxy = proxyInfo
 
     while enable:
         evaluationUrl = 'https://sclub.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98vv445&' \
               'productId={productId}&score={score}&sortType=5&page={page}&pageSize=10&isShadowSku=0&rid=0&fold=1'.format\
             (productId=productId, score=score, page=page)
 
-        for num in range(len(linkProxy)):
+        for num in range(len(proxyInfo)):
             if num == 0:
                 continue
 
-            proxyIP = linkProxy[num]['ip']
+            proxyIP = proxyInfo[num]['ip']
             html = getHTMLText(evaluationUrl, proxyIP)
 
             if html == None:
-                deleteList.append(linkProxy[num])
-                linkProxy.remove(linkProxy[num])
+                deleteList += 1
+                proxyInfo.remove(proxyInfo[num])
                 continue
             else:
                 break
@@ -221,17 +220,11 @@ def getEvaluationUrl():
             enable = False
         page += 1
 
-    print(len(deleteList))
+    print(deleteList)
     print(len(proxyInfo))
-
-    for proxy in deleteList:
-        proxyInfo.remove(proxy)
 
     writrProxyExcel(proxyInfo)
     print("评论完全爬取完成")
-
-
-
 
 
 if __name__ == '__main__':
