@@ -39,7 +39,6 @@ def getHTMLText(url, code = 'utf-8'):
             html = r.text
         except Exception:
             html = None
-            logger.exception("Download HTML Text failed")
 
         if html == None:
             proxyInfo.remove(proxyInfo[num])
@@ -131,7 +130,8 @@ def writeExcel(comment_list, shop_id):
     page_workbook = openpyxl.load_workbook(pata)
     table_Name = page_workbook.get_sheet_names()
     if shop_id in table_Name:
-        page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[0])
+        position = table_Name.index(shop_id)
+        page_sheet = page_workbook.get_sheet_by_name(page_workbook.get_sheet_names()[position])
         row = page_sheet.max_row
         for i in range(len(comment_list)):
             page_sheet["A%d" % (row + i + 1)].value = comment_list[i]['商品类型']
@@ -186,8 +186,6 @@ def getContentExtraction(buyersomments, score, shop_id):
     """
     jdkkComment_list = []
 
-    commentType = ''
-
     if int(score) == 1:
         commentType = '差评'
     else:
@@ -212,15 +210,15 @@ def getContentExtraction(buyersomments, score, shop_id):
 
         # 第二次评价信息
         created = ''
-        modify_mostcontent = ''
+        modifyMostComment = ''
         if "afterUserComment" in buyersomments[num].keys():
             afterUserComment = buyersomments[num]["afterUserComment"]
             # 第二次评价时间
             created = afterUserComment["created"]
             # 第二次评价内容
             hAfterUserComment = afterUserComment["hAfterUserComment"]
-            mostcontent = hAfterUserComment["content"]
-            modify_mostcontent = commentProcessing(mostcontent)
+            mostComment = hAfterUserComment["content"]
+            modifyMostComment = commentProcessing(mostComment)
 
         # 评价客户端
         userClientShow = buyersomments[num]['userClientShow']
@@ -231,7 +229,7 @@ def getContentExtraction(buyersomments, score, shop_id):
         kkComment_data['评价时间'] = creationTime
         kkComment_data['评价内容'] = modify_content
         kkComment_data['追评时间'] = created
-        kkComment_data['追评内容'] = modify_mostcontent
+        kkComment_data['追评内容'] = modifyMostComment
         kkComment_data['评价客户端'] = userClientShow
         kkComment_data['评价类型'] = commentType
 
@@ -241,7 +239,10 @@ def getContentExtraction(buyersomments, score, shop_id):
 
 
 def getEvaluationUrl(shop_id):
-    # 2为中评，1为差评
+    """
+    下载并写入商品id下的中评、差评
+    """
+    # score：2为中评，1为差评
     scoreList = ['1', '2']
     for score in scoreList:
         enable = True
@@ -269,20 +270,23 @@ def getEvaluationUrl(shop_id):
             page += 1
 
 def Start():
+    """
+    搜索输入的店铺名称并获取该店铺下所有sku商品id
+    """
     shopList = []
     shopName = '控客京东自营旗舰店'
 
     # 获取店铺下所有sku的商品id
-    # shopSearchUrl = 'https://search.jd.com/Search?keyword={shopName}&enc=utf-8&pvid=75680dd04a8c4c1692304f1fee4e591a'.format\
-    #     (shopName=shopName, )
-    #
-    # shopSearchHtml = getHTMLText(shopSearchUrl)
-    # getShopId(shopSearchHtml, shopList)
+    shopSearchUrl = 'https://search.jd.com/Search?keyword={shopName}&enc=utf-8&pvid=75680dd04a8c4c1692304f1fee4e591a'.format\
+        (shopName=shopName, )
+
+    shopSearchHtml = getHTMLText(shopSearchUrl)
+    getShopId(shopSearchHtml, shopList)
 
     # 获取单sku商品下的所有评论
-    shopid = '4183290'
-    print("{shopName}的商品：{shopid}".format(shopName=shopName, shopid=shopid))
-    getEvaluationUrl(shopid)
+    for shopid in shopList:
+        print("{shopName}的商品：{shopid}".format(shopName=shopName, shopid=shopid))
+        getEvaluationUrl(shopid)
     print("评论完全爬取完成")
 
 
@@ -290,7 +294,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
-                        filename='/Users/wangjiacan/Desktop/代码/log/kk_jd_comment.txt',
+                        filename='/Users/wangjiacan/Desktop/代码/log/jdShopComment.txt',
                         filemode='a')
 
     logger = logging.getLogger()
