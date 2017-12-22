@@ -1,85 +1,138 @@
 #!/usr/local/Cellar/python3
 # -*- coding: utf-8 -*-
 
-import requests
-from bs4 import BeautifulSoup
-import re
-import logging
 import openpyxl
 import os
-import json
 
 
-class excelOperating(object):
-    def __init__(self, fileLocation, title, tableName):
-        self.columnList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'O']
-        self.newColumnList = []
-        self.writeContentList = []
-        self.fileLocation = fileLocation
-        self.title = title
-        self.tableName = tableName
+def dataProcessing(title):
+    """
+    转化写入数据函数
+    输入字段说明：
+    title：待转化文本列表，列表类型。
+    输出字段说明：
+    writeContentList：excel模块可写入的文本列表，列表类型
+    """
+    writeContentList = []
+    columnList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'O']
+    columnNum = len(title[0])
+    rowsNum = len(title)
+    newColumnList = columnList[0:columnNum]
+
+    for num_1 in range(rowsNum):
+        rows = num_1 + 1
+        for num_2 in range(columnNum):
+            writeContent = {'column': '', 'rows': '', 'content': '', }
+            column = newColumnList[num_2]
+            writeContent['column'] = column
+            writeContent['rows'] = rows
+            writeContentList.append(writeContent)
+
+    contentList = []
+    for num in range(len(title)):
+        for key in title[num]:
+            content = title[num][key]
+            contentList.append(content)
+
+    for i in range(len(writeContentList)):
+        writeContentList[i]['content'] = contentList[i]
+
+    return writeContentList
 
 
-    def dataProcessing(self):
-        columnNum = len(self.title[0])
-        rowsNum = len(self.title)
-        self.newColumnList = self.columnList[0:columnNum]
-        for num_1 in range(rowsNum):
+def writeExcel(fileLocation, writeContentList, tableName):
+    """
+    excel写入函数
+    输入字段说明：
+    fileLocation：excel存放路径，字符串类型
+    tableName：excel子表表名，字符串类型
+    writeContentList：excel模块可写入的文本列表，列表类型
+    """
+    if not os.path.exists(fileLocation):
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = tableName
+        workbook.save(fileLocation)
 
-            rows = num_1 + 1
-            for num_2 in range(columnNum):
-                writeContent = {'column': '', 'rows': '', 'content': '', }
-                column = self.newColumnList[num_2]
-                writeContent['column'] = column
-                writeContent['rows'] = rows
-                self.writeContentList.append(writeContent)
+    existedWorkbook = openpyxl.load_workbook(fileLocation)
+    tableNameList = existedWorkbook.get_sheet_names()
+    if tableName in tableNameList:
+        position = tableNameList.index(tableName)
+        existedSheet = existedWorkbook.get_sheet_by_name(existedWorkbook.get_sheet_names()[position])
+        row = existedSheet.max_row
 
-            # for key in self.title[num_1]:
-            #     # print(self.writeContentList[num_1])
-            #     content = self.title[num_1][key]
-            #     # self.writeContentList[num_1]['content'] = content
-            #     # print(content)
+        if row == 1:
+            row = 0
 
+        for i in range(len(writeContentList)):
+            column = writeContentList[i]['column']
+            content = writeContentList[i]['content']
+            rows = writeContentList[i]['rows'] + row
+            existedSheet["{column}{rows}".format(column=column, rows=rows)].value = content
+    else:
+        newSheet = existedWorkbook.create_sheet()
+        newSheet.title = tableName
+        for i in range(len(writeContentList)):
+            column = writeContentList[i]['column']
+            content = writeContentList[i]['content']
+            rows = writeContentList[i]['rows']
+            newSheet["{column}{rows}".format(column=column, rows=rows)].value = content
 
-        # print(self.writeContentList)
-        # for i in range(len(self.writeContentList)):
-        #     print(self.writeContentList[i])
-        aList = []
-        for num in range(len(self.title)):
-            for key in self.title[num]:
-                content = self.title[num][key]
-                aList.append(content)
-
-        for i in range(len(self.writeContentList)):
-            self.writeContentList[i]['content'] = aList[i]
-
-        print(self.writeContentList)
-
-
-
-    def writeExcel(self):
-        test = [{'column': 'A', 'content': '用户名','rows':'1'}, {'column': 'B', 'content': '会员等级', 'rows':'1'}]
-
-        if not os.path.exists(self.fileLocation):
-            workbook = openpyxl.Workbook()
-            sheet = workbook.active
-            sheet.title = self.tableName
-            for i in range(len(test)):
-                column = test[i]['column']
-                content = test[i]['content']
-                rows = test[i]['rows']
-                sheet["{column}{rows}".format(column=column, rows=rows)].value = content
-            workbook.save(self.fileLocation)
-
-        print("yep")
+    existedWorkbook.save(fileLocation)
 
 
+def readExcel(fileLocation, tableName, columnCount, excelType):
+    """
+    excel读取函数
+    输入字段说明：
+    fileLocation：excel存放路径，字符串类型
+    tableName：excel子表表名，字符串类型
+    columnCount：读取的列数列表，列表类型
+    excelType：读取的excel标题栏，列表类型
+    输出字段说明：
+    excelInfoList：返回已读取的数据列表，列表类型
+    """
+    excelInfoList = []
 
+    readWorkbook = openpyxl.load_workbook(fileLocation)
+    tableNameList = readWorkbook.get_sheet_names()
+    position = tableNameList.index(tableName)
+    readSheet = readWorkbook.get_sheet_by_name(readWorkbook.get_sheet_names()[position])
 
-a = '/Users/wangjiacan/Desktop/shawn/爬取资料/test1.xlsx'
-b = [{'ip': 'ip', '类型': '类型', '验证时间': '验证时间', },
-     {'ip': '202.85.213.219:3128', '类型': 'HTTP/HTTPS', '验证时间': '2017-12-01 18:12:24', }, ]
-c = '2332'
-spider = excelOperating(a, b, c)
-# spider.writeExcel()
-spider.dataProcessing()
+    for row in readSheet.rows:
+        rowsInfoList = []
+
+        for column in columnCount:
+            rowsInfoList.append(row[column].value)
+        excelInfoData = dict(zip(excelType, rowsInfoList))
+
+        excelInfoList.append(excelInfoData)
+
+    readWorkbook.save(fileLocation)
+
+    return excelInfoList
+
+def coverExcel(fileLocation, tableName, writeContentList):
+    """
+    excel覆盖函数
+    输入字段说明：
+    fileLocation：excel存放路径，字符串类型
+    tableName：excel子表表名，字符串类型
+    writeContentList：excel模块可写入的文本列表，列表类型
+    """
+    coverWorkbook = openpyxl.load_workbook(fileLocation)
+    tableNameList = coverWorkbook.get_sheet_names()
+    position = tableNameList.index(tableName)
+    coverSheet = coverWorkbook.get_sheet_by_name(coverWorkbook.get_sheet_names()[position])
+
+    coverWorkbook.remove_sheet(coverSheet)
+
+    newSheet = coverWorkbook.create_sheet(tableName)
+
+    for i in range(len(writeContentList)):
+        column = writeContentList[i]['column']
+        content = writeContentList[i]['content']
+        rows = writeContentList[i]['rows']
+        newSheet["{column}{rows}".format(column=column, rows=rows)].value = content
+
+    coverWorkbook.save(fileLocation)
