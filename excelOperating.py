@@ -40,14 +40,16 @@ def dataProcessing(title):
     return writeContentList
 
 
-def writeExcel(fileLocation, writeContentList, tableName):
+def writeExcel(fileLocation, title, tableName):
     """
     excel写入函数
     输入字段说明：
     fileLocation：excel存放路径，字符串类型
     tableName：excel子表表名，字符串类型
-    writeContentList：excel模块可写入的文本列表，列表类型
+    title：excel模块需写入的文本列表，列表类型。
     """
+    writeContentList = dataProcessing(title)
+
     if not os.path.exists(fileLocation):
         workbook = openpyxl.Workbook()
         sheet = workbook.active
@@ -112,14 +114,16 @@ def readExcel(fileLocation, tableName, columnCount, excelType):
 
     return excelInfoList
 
-def coverExcel(fileLocation, tableName, writeContentList):
+def coverExcel(fileLocation, tableName, title):
     """
     excel覆盖函数
     输入字段说明：
     fileLocation：excel存放路径，字符串类型
     tableName：excel子表表名，字符串类型
-    writeContentList：excel模块可写入的文本列表，列表类型
+    title：excel模块需写入的文本列表，列表类型。
     """
+    writeContentList = dataProcessing(title)
+
     coverWorkbook = openpyxl.load_workbook(fileLocation)
     tableNameList = coverWorkbook.get_sheet_names()
     position = tableNameList.index(tableName)
