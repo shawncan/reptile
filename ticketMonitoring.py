@@ -8,6 +8,9 @@ import logging
 import openpyxl
 import os
 import json
+import excelOperating
+import datetime
+import time
 
 
 def getHTMLText(url):
@@ -23,12 +26,62 @@ def getHTMLText(url):
         print("爬取失败")
 
 
+def getCityCode():
+    filePath = '/Users/wangjiacan/Desktop/shawn/爬取资料/cityCode.xlsx'
+    tableName = 'fliggy'
+    columnCount = [0, 1]
+    excelType = ["A", 'B']
+    cityCodeInfo = excelOperating.readExcel(filePath, tableName, columnCount, excelType)
+    code = []
+
+    city = "杭州"
+
+    for cityCode in cityCodeInfo:
+        if city in cityCode.values():
+            code.append(cityCode['A'])
+        else:
+            continue
+
+    return code
+
+
+def getDepartureTicket():
+    airTicketsList = []
+
+    cityCode = getCityCode()
+    routes = cityCode[0]
+
+    currentTime = time.time()
+    startDate = time.strftime("%Y-%m-%d", time.localtime())
+    endDate = time.strftime("%Y-%m-%d", time.localtime(float(currentTime + 3888000)))
+
+
+    departureTicketUrl = 'https://sjipiao.fliggy.com/search/cheapFlight.htm?startDate={startDate}&endDate={endDate}&' \
+                         'routes={routes}-&_ksTS=1514440974905_1979&callback=jsonp1980&ruleId=99&flag=1'.format(
+        startDate=startDate, endDate=endDate, routes=routes)
+
+    airTicketsInfo = getHTMLText(departureTicketUrl)
+
+    host = re.findall(r'"HOST":".*","status"', airTicketsInfo)
+    hostLength = len(host[0][8:-10])
+
+    lnterceptionLength = 21 + hostLength + 22
+    airTickets = airTicketsInfo.strip()[lnterceptionLength:-2]
+
+    airTicketsData = json.loads(airTickets)
+
+    flights = airTicketsData['flights']
+
+    for info in flights:
+        infoData = {'目的地':'', '机票价格':'', '出发日期':'', '折扣':''}
+
+        infoData['目的地'] = info['arrName']
+        infoData['机票价格'] = info['price']
+        infoData['出发日期'] = info['depDate']
+        infoData['折扣'] = info['discount']
+
+        airTicketsList.append(infoData)
+
+
 if __name__ == '__main__':
-    url = 'http://webresource.c-ctrip.com/code/cquery/resource/address/flight/flight_new_poi_gb2312.js?releaseno=?CR_2016_03_07_22_18_26'
-    html = getHTMLText(url)
-    htmlInfo = re.findall(r'([\u4e00-\u9fa5]+)\(([A-Z]{3})\)', str(html))
-
-    a = list(set(htmlInfo))
-
-    for i in a[0]:
-        print(i)
+    getDepartureTicket()
