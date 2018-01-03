@@ -11,6 +11,7 @@ import json
 import excelOperating
 import datetime
 import time
+import configparser
 
 
 def getHTMLText(url):
@@ -82,6 +83,21 @@ def getDepartureTicket():
 
         airTicketsList.append(infoData)
 
+    return airTicketsList
+
+
+def start():
+    conf = configparser.ConfigParser()
+    conf.read("/Users/wangjiacan/Desktop/代码/Profile/localConfiguration.ini")
+
+    file_location = conf.get("ticketMonitoring", "file_location")
+    table_name = conf.get("ticketMonitoring", "table_name")
+    print(file_location)
+    print(table_name)
+
+    airTicketsList = getDepartureTicket()
+    print(airTicketsList)
+
 
 if __name__ == '__main__':
-    getDepartureTicket()
+    start()
