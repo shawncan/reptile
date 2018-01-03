@@ -5,7 +5,7 @@ import openpyxl
 import os
 
 
-def dataProcessing(title):
+def dataProcessing(fileLocation, title, tableName):
     """
     转化写入数据函数
     输入字段说明：
@@ -13,29 +13,81 @@ def dataProcessing(title):
     输出字段说明：
     writeContentList：excel模块可写入的文本列表，列表类型
     """
+    formFields = []
     writeContentList = []
+    contentList = []
+    positionList = []
+    newContentList = []
+    completeContentList = []
+
     columnList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'O']
     columnNum = len(title[0])
     rowsNum = len(title)
     newColumnList = columnList[0:columnNum]
 
+    # 获取表格表头字段
+    readWorkbook = openpyxl.load_workbook(fileLocation)
+    tableNameList = readWorkbook.get_sheet_names()
+    position = tableNameList.index(tableName)
+    readSheet = readWorkbook.get_sheet_by_name(readWorkbook.get_sheet_names()[position])
+    column = readSheet.max_column
+    row = readSheet.max_row
+
+    for num in range(column):
+        num += 1
+        formFields.append(readSheet.cell(row=1,column=num).value)
+
+
+    # 处理数据：按照数据的数量与个数，生成column与rows数据
     for num_1 in range(rowsNum):
-        rows = num_1 + 1
+        newRow = num_1 + 1
         for num_2 in range(columnNum):
             writeContent = {'column': '', 'rows': '', 'content': '', }
             column = newColumnList[num_2]
             writeContent['column'] = column
-            writeContent['rows'] = rows
+            writeContent['rows'] = newRow + row
             writeContentList.append(writeContent)
 
-    contentList = []
+    # 获取输入数据中字段的排序顺序
+    for key in title[0]:
+        position = formFields.index(key)
+        positionList.append(position)
+
+
+    # 获取输入数据中的内容
     for num in range(len(title)):
+        contentInfo = []
         for key in title[num]:
             content = title[num][key]
-            contentList.append(content)
+            contentInfo.append(content)
+        contentList.append(contentInfo)
 
-    for i in range(len(writeContentList)):
-        writeContentList[i]['content'] = contentList[i]
+
+    # 处理数据：按照表头的顺序排序输入数据内容
+    for contentInfo in contentList:
+        newContentInfo = []
+        for num in range(len(contentInfo)):
+            content = contentInfo[num]
+            position = positionList[num]
+
+            if position == num:
+                newContentInfo.append(content)
+            elif position > num:
+                newContentInfo.append(content)
+            else:
+                newContentInfo.insert(position, content)
+
+        newContentList.append(newContentInfo)
+
+
+    # 处理数据：根据排序好的数据整理成可编辑的表格
+    for contentList in newContentList:
+        for content in contentList:
+            completeContentList.append(content)
+
+
+    for num in range(len(writeContentList)):
+        writeContentList[num]['content'] = completeContentList[num]
 
     return writeContentList
 
@@ -48,7 +100,7 @@ def writeExcel(fileLocation, title, tableName):
     tableName：excel子表表名，字符串类型
     title：excel模块需写入的文本列表，列表类型。
     """
-    writeContentList = dataProcessing(title)
+    writeContentList = dataProcessing(fileLocation, title, tableName)
 
     if not os.path.exists(fileLocation):
         workbook = openpyxl.Workbook()
@@ -122,7 +174,7 @@ def coverExcel(fileLocation, tableName, title):
     tableName：excel子表表名，字符串类型
     title：excel模块需写入的文本列表，列表类型。
     """
-    writeContentList = dataProcessing(title)
+    writeContentList = dataProcessing(fileLocation, title, tableName)
 
     coverWorkbook = openpyxl.load_workbook(fileLocation)
     tableNameList = coverWorkbook.get_sheet_names()
