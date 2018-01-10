@@ -17,6 +17,7 @@ def dataProcessing(fileLocation, title, tableName):
     writeContentList = []
     contentList = []
     positionList = []
+    positionUseList = []
     newContentList = []
     completeContentList = []
 
@@ -70,12 +71,23 @@ def dataProcessing(fileLocation, title, tableName):
             content = contentInfo[num]
             position = positionList[num]
 
-            if position == num:
-                newContentInfo.append(content)
-            elif position > num:
-                newContentInfo.append(content)
-            else:
+            positionUseList.append(position)
+
+            if position == 0:
                 newContentInfo.insert(position, content)
+            elif position == 1:
+                if 0 in positionUseList:
+                    newContentInfo.insert(position, content)
+                else:
+                    newContentInfo.insert(0, content)
+            elif position == 2:
+                if 3 in positionUseList:
+                    insertLocation = int(positionUseList.index(3)) - 1
+                    newContentInfo.insert(insertLocation, content)
+                else:
+                    newContentInfo.append(content)
+            else:
+                newContentInfo.append(content)
 
         newContentList.append(newContentInfo)
 
@@ -113,15 +125,11 @@ def writeExcel(fileLocation, title, tableName):
     if tableName in tableNameList:
         position = tableNameList.index(tableName)
         existedSheet = existedWorkbook.get_sheet_by_name(existedWorkbook.get_sheet_names()[position])
-        row = existedSheet.max_row
-
-        if row == 1:
-            row = 0
 
         for i in range(len(writeContentList)):
             column = writeContentList[i]['column']
             content = writeContentList[i]['content']
-            rows = writeContentList[i]['rows'] + row
+            rows = writeContentList[i]['rows']
             existedSheet["{column}{rows}".format(column=column, rows=rows)].value = content
     else:
         newSheet = existedWorkbook.create_sheet()
