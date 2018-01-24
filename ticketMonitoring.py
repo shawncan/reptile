@@ -92,11 +92,11 @@ def start():
 
     file_location = conf.get("ticketMonitoring", "file_location")
     table_name = conf.get("ticketMonitoring", "table_name")
-    print(file_location)
-    print(table_name)
-
     airTicketsList = getDepartureTicket()
-    print(airTicketsList)
+
+    excelOperating.writeExcel(file_location, airTicketsList, table_name)
+    # a = excelOperating.dataProcessing(file_location, airTicketsList, table_name)
+    # print(a)
 
 
 if __name__ == '__main__':
