@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import pymysql
-import logging
 import configparser
 
 
@@ -10,7 +9,7 @@ class MYSQL(object):
 
     def __init__(self):
         conf = configparser.ConfigParser()
-        conf.read("/Users/wangjiacan/Desktop/代码/Profile/localConfiguration.ini")
+        conf.read("/Users/wangjiacan/Desktop/sourceCode/configurationFile/localConfiguration.ini")
 
         self.host = conf.get("localServer", "host")
         self.port = int(conf.get("localServer", "port"))
