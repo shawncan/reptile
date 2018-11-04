@@ -4,7 +4,8 @@
 import os
 import json
 
-def troubleshooting(path, fileNameList, questionLabel, errorLabelList, a):
+
+def troubleshooting(path, fileNameList, questionLabel, a):
     imageNameList = []
     for fileName in fileNameList:
         filePath = path + fileName
@@ -16,7 +17,7 @@ def troubleshooting(path, fileNameList, questionLabel, errorLabelList, a):
         readFile = open(filePath)
 
         fileContent = readFile.read()
-        markingData = json.loads(fileContent.replace("'","\""))
+        markingData = json.loads(fileContent.replace("'", "\""))
         marking = markingData['tags']
 
         markingList = marking.split(';')
@@ -29,46 +30,36 @@ def troubleshooting(path, fileNameList, questionLabel, errorLabelList, a):
                 imageNameList.append(imageName)
                 break
 
-        for imageName in imageNameList:
-            c = errorLabelList.count(imageName)
-
-            if c == 1:
-                imageNameList.remove(imageName)
-
     return imageNameList
 
 
-
 # 获取该目录下所有文件，存入列表中
-path = '/Users/wangjiacan/Desktop/自动工作相关/标签/'
-# path ='/Users/wangjiacan/Desktop/自动工作相关/test/'
-outputFile = '/Users/wangjiacan/Desktop/自动工作相关/test.txt'
+# path = '/Users/wangjiacan/Desktop/自动工作相关/标签/'
+path = r"D:\自动工作相关\标签\\"
 
-labelCombination = [['7', '8', '5'], ['37', '39'], ['44', '47', '40', '33'], ['42', '-1']]
+# outputFile = '/Users/wangjiacan/Desktop/自动工作相关/test.txt'
+outputFile = r"D:\自动工作相关\test_3.txt"
+
+# 柜子
+labelCombination = ['7', '8', '5']
+# 边几与架子
+# labelCombination = ['37', '39']
+# 小物件
+# labelCombination = ['44', '47', '40', '33']
+# 屏风
+# labelCombination = ['42', '-1']
+
 labelList = []
 errorLabelList = []
-a = 0
+a = 1
 
-for label in labelCombination:
-    a +=1
-    fileNameList = os.listdir(path)
+fileNameList = os.listdir(path)
 
-    imageNameList = troubleshooting(path, fileNameList, label, errorLabelList, a)
-
-    labelList.append(imageNameList)
-
-    for imageName in imageNameList:
-        errorLabelList.append(imageName)
-
+imageNameList = troubleshooting(path, fileNameList, labelCombination, a)
 
 writeFile = open(outputFile, 'w')
 
-for tag in labelList:
-    print(len(tag))
-    for imageName in tag:
-        writeFile.write(str(imageName) + '\n')
-
-    writeFile.write('\n')
+for tag in imageNameList:
+    writeFile.write(str(tag) + '\n')
 
 writeFile.close()
-
